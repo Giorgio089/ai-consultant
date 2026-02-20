@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { isSafeUrl } from './utils/security';
 import './App.css';
 import { CONFIG } from './config';
 
@@ -20,6 +21,11 @@ function App() {
 
     try {
       // Validate URL
+      const securityCheck = isSafeUrl(url);
+      if (!securityCheck.safe) {
+        throw new Error(securityCheck.error);
+      }
+
       const urlObj = new URL(url);
       
       // Validate protocol
@@ -219,6 +225,10 @@ function App() {
           >
             {loading ? 'Analyzing...' : 'Analyze'}
           </button>
+        </div>
+
+        <div className="security-warning" style={{ margin: '10px 0', fontSize: '0.9em', color: '#666', textAlign: 'center' }}>
+          ⚠️ This tool uses a public proxy. Do not analyze pages with sensitive data (PII, internal networks).
         </div>
 
         {error && (
