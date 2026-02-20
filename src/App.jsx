@@ -22,6 +22,11 @@ function App() {
       // Validate URL
       const urlObj = new URL(url);
       
+      // Validate protocol
+      if (urlObj.protocol !== 'http:' && urlObj.protocol !== 'https:') {
+        throw new Error('Only http and https protocols are allowed');
+      }
+
       // Use a CORS proxy for the free tier
       const proxyUrl = `${CONFIG.PROXY_URL}${encodeURIComponent(url)}`;
       
