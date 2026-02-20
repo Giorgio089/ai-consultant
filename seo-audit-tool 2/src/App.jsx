@@ -94,9 +94,19 @@ function App() {
     const textContent = body ? body.textContent.trim().length : 0;
     
     // Check for common JS frameworks
-    const hasReact = html.includes('react') || html.includes('React');
-    const hasVue = html.includes('vue') || html.includes('Vue');
-    const hasAngular = html.includes('angular') || html.includes('ng-');
+    let frameworkName = 'None';
+    let jsFrameworkDetected = false;
+
+    if (/react/i.test(html)) {
+      frameworkName = 'React';
+      jsFrameworkDetected = true;
+    } else if (/vue/i.test(html)) {
+      frameworkName = 'Vue';
+      jsFrameworkDetected = true;
+    } else if (/angular|ng-/i.test(html)) {
+      frameworkName = 'Angular';
+      jsFrameworkDetected = true;
+    }
     
     // Simple heuristic: if script content is more than 50% of text, likely JS-heavy
     const jsHeavy = scriptContent > textContent * 0.5;
@@ -105,8 +115,8 @@ function App() {
       textContentLength: textContent,
       scriptContentLength: scriptContent,
       ratio: textContent > 0 ? (scriptContent / textContent).toFixed(2) : 'N/A',
-      jsFrameworkDetected: hasReact || hasVue || hasAngular,
-      frameworkName: hasReact ? 'React' : hasVue ? 'Vue' : hasAngular ? 'Angular' : 'None',
+      jsFrameworkDetected,
+      frameworkName,
       assessment: jsHeavy ? 'JS-Heavy (Potential LLM Issues)' : 'HTML-Rich (LLM-Friendly)',
       llmFriendly: !jsHeavy && textContent > 1000
     };
