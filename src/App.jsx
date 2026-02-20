@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import './App.css';
+import { CONFIG } from './config';
 
 function App() {
   const [url, setUrl] = useState('');
@@ -22,7 +23,7 @@ function App() {
       const urlObj = new URL(url);
       
       // Use a CORS proxy for the free tier
-      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const proxyUrl = `${CONFIG.PROXY_URL}${encodeURIComponent(url)}`;
       
       const response = await fetch(proxyUrl);
       const html = await response.text();
