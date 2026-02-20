@@ -54,7 +54,8 @@ function App() {
   const checkBasicSEO = (doc) => {
     const title = doc.querySelector('title');
     const metaDesc = doc.querySelector('meta[name="description"]');
-    const h1 = doc.querySelector('h1');
+    const h1s = doc.querySelectorAll('h1');
+    const h1 = h1s[0];
     const h2 = doc.querySelectorAll('h2');
     
     return {
@@ -71,10 +72,10 @@ function App() {
         optimal: metaDesc && metaDesc.getAttribute('content').length >= 120 && metaDesc.getAttribute('content').length <= 160
       },
       h1: {
-        exists: !!h1,
-        count: doc.querySelectorAll('h1').length,
+        exists: h1s.length > 0,
+        count: h1s.length,
         content: h1 ? h1.textContent : '',
-        optimal: doc.querySelectorAll('h1').length === 1
+        optimal: h1s.length === 1
       },
       h2: {
         exists: h2.length > 0,
