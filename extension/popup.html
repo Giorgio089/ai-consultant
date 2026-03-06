@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GEO Page Audit</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+
+<body>
+  <div id="app">
+    <header>
+      <h1>🤖 GEO Page Audit</h1>
+      <p class="subtitle">Audit the current page</p>
+    </header>
+
+    <div id="status" class="status">
+      <button id="analyzeBtn" class="analyze-btn">Analyze This Page</button>
+    </div>
+
+    <div id="loading" class="loading hidden">
+      <div class="spinner"></div>
+      <p>Analyzing…</p>
+    </div>
+
+    <div id="error" class="error hidden"></div>
+
+    <div id="results" class="results hidden">
+      <!-- Score -->
+      <div class="score-section">
+        <div id="scoreCircle" class="score-circle">
+          <span id="scoreValue" class="score-value">0</span>
+        </div>
+        <p id="scoreLabel" class="score-label"></p>
+      </div>
+
+      <!-- URL -->
+      <p id="auditUrl" class="audit-url"></p>
+
+      <!-- Basic SEO -->
+      <details class="section" open>
+        <summary>📋 Basic SEO <span id="seoScore" class="section-score"></span></summary>
+        <div id="seoChecks" class="checks"></div>
+      </details>
+
+      <!-- LLM Readability -->
+      <details class="section" open>
+        <summary>🤖 LLM Readability <span id="llmScore" class="section-score"></span></summary>
+        <div id="llmChecks" class="checks"></div>
+      </details>
+
+      <!-- Structured Data -->
+      <details class="section" open>
+        <summary>🏷️ Structured Data <span id="sdScore" class="section-score"></span></summary>
+        <div id="sdChecks" class="checks"></div>
+      </details>
+
+      <!-- Actions -->
+      <div class="actions">
+        <button id="copyJsonBtn" class="action-btn">📋 Copy JSON</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="popup.js" type="module"></script>
+</body>
+
+</html>
