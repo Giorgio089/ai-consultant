@@ -284,14 +284,33 @@ function makeCheckItem(status, title, detail, recommendation) {
 
     const icon = status === 'good' ? '✓' : status === 'warn' ? '⚠' : '✗';
 
-    div.innerHTML = `
-    <div class="check-header">
-      <span class="status-icon status-${status}">${icon}</span>
-      <strong>${title}</strong>
-    </div>
-    ${detail ? `<p class="check-detail">${escapeHtml(detail)}</p>` : ''}
-    ${recommendation ? `<p class="check-recommendation">💡 ${escapeHtml(recommendation)}</p>` : ''}
-  `;
+    const header = document.createElement('div');
+    header.className = 'check-header';
+
+    const iconSpan = document.createElement('span');
+    iconSpan.className = `status-icon status-${status}`;
+    iconSpan.textContent = icon;
+
+    const titleStrong = document.createElement('strong');
+    titleStrong.textContent = title;
+
+    header.appendChild(iconSpan);
+    header.appendChild(titleStrong);
+    div.appendChild(header);
+
+    if (detail) {
+        const detailP = document.createElement('p');
+        detailP.className = 'check-detail';
+        detailP.textContent = detail;
+        div.appendChild(detailP);
+    }
+
+    if (recommendation) {
+        const recP = document.createElement('p');
+        recP.className = 'check-recommendation';
+        recP.textContent = '💡 ' + recommendation;
+        div.appendChild(recP);
+    }
 
     return div;
 }
