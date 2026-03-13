@@ -7,6 +7,7 @@
  */
 
 import { runAudit } from './audit/runAudit.js';
+import { getBrowserApi } from './lib/browserApi.js';
 
 // ─── DOM Elements ───────────────────────────────────────────────────
 
@@ -19,12 +20,13 @@ const statusEl = $('#status');
 const copyJsonBtn = $('#copyJsonBtn');
 
 let lastResult = null;
+const browserApi = getBrowserApi();
 
 // ─── Analyze ────────────────────────────────────────────────────────
 
 analyzeBtn.addEventListener('click', async () => {
     // Get current tab
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [tab] = await browserApi.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id || !tab?.url) {
         showError('Could not get the current tab URL.');
         return;
@@ -72,7 +74,7 @@ analyzeBtn.addEventListener('click', async () => {
  */
 async function getTabHTML(tabId) {
     try {
-        const results = await chrome.scripting.executeScript({
+        const results = await browserApi.scripting.executeScript({
             target: { tabId },
             func: () => document.documentElement.outerHTML,
         });
