@@ -11,4 +11,5 @@ test('firefox manifest includes gecko id and data collection declaration', async
 
   assert.ok(manifest.browser_specific_settings?.gecko?.id);
   assert.ok(Array.isArray(manifest.data_collection_permissions));
+  assert.equal('host_permissions' in manifest, false);
 });
