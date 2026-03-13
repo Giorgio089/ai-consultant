@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "jsdom": "^28.1.0"
+  }
+}
