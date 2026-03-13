@@ -35,6 +35,15 @@ You can find and install the extension via the Chrome Web Store (Link coming soo
 3. View the detailed audit breakdown and suggestions.
 4. Use **Copy JSON** to extract the data for further sharing or analysis.
 
+## Permissions
+
+The extension uses the smallest permission set needed for its current behavior:
+
+- `activeTab`: grants temporary access only to the tab the user explicitly chooses to analyze.
+- `scripting`: reads the already rendered DOM of the active page so the audit can analyze live content.
+
+The extension does not request persistent host permissions and does not run site analysis in the background.
+
 ## Development
 
 The entire logic is self-contained using Manifest V3 and requires no build step.
@@ -43,6 +52,8 @@ Edit files inside the `extension` folder and click the reload icon on the Extens
 - **`manifest.json`**: Permissions and metadata.
 - **`popup.html/js`**: UI rendering and button logic.
 - **`audit/runAudit.js`**: Core HTML scraping, DOM checking, and scoring logic.
+
+Current extension version: `0.1.1`
 
 ## License
 
