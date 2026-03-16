@@ -14,7 +14,7 @@ The generated extension lives in `dist/firefox/` and uses `dist/firefox/manifest
 
 - Gecko ID: `geo-page-audit@georgsimic.com`
 - Minimum Firefox version: `121.0`
-- `data_collection_permissions`: present as an explicit empty array
+- `browser_specific_settings.gecko.data_collection_permissions.required`: set to `["none"]`
 - `host_permissions`: intentionally omitted from the Firefox manifest
 
 ## Local Verification

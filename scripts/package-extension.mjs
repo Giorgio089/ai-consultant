@@ -28,6 +28,7 @@ await fs.cp(extensionDir, targetDir, {
   filter(source) {
     const basename = path.basename(source);
 
+    if (basename === '.DS_Store') return false;
     if (basename === 'package.json') return false;
     if (basename === 'manifest.chrome.json') return false;
     if (basename === 'manifest.firefox.json') return false;

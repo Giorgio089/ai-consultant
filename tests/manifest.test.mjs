@@ -9,9 +9,17 @@ test('manifest uses minimal permissions for store submission', async () => {
     );
     const manifest = JSON.parse(rawManifest);
 
-    assert.equal(manifest.version, '0.1.1');
+    assert.equal(manifest.version, '0.1.2');
     assert.deepEqual(manifest.permissions, ['activeTab', 'scripting']);
     assert.equal('host_permissions' in manifest, false);
+    assert.deepEqual(manifest.background.scripts, ['background.js']);
+    assert.equal(manifest.background.service_worker, 'background.js');
+    assert.ok(manifest.browser_specific_settings?.gecko?.id);
+    assert.deepEqual(
+        manifest.browser_specific_settings?.gecko?.data_collection_permissions?.required,
+        ['none'],
+    );
+    assert.equal('data_collection_permissions' in manifest, false);
 });
 
 test('firefox manifest includes gecko id and data collection declaration', async () => {
@@ -21,7 +29,14 @@ test('firefox manifest includes gecko id and data collection declaration', async
   );
   const manifest = JSON.parse(raw);
 
+  assert.equal(manifest.version, '0.1.2');
   assert.ok(manifest.browser_specific_settings?.gecko?.id);
-  assert.ok(Array.isArray(manifest.data_collection_permissions));
+  assert.deepEqual(manifest.background.scripts, ['background.js']);
+  assert.equal(manifest.background.service_worker, 'background.js');
+  assert.deepEqual(
+    manifest.browser_specific_settings?.gecko?.data_collection_permissions?.required,
+    ['none'],
+  );
+  assert.equal('data_collection_permissions' in manifest, false);
   assert.equal('host_permissions' in manifest, false);
 });

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GEO Page Audit",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Simple single page audit: Check SEO basics, LLM readability and structured data to find optimizations for better GEO visibility.",
   "permissions": [
     "activeTab",
@@ -19,6 +19,11 @@
     "scripts": [
       "background.js"
     ],
+    "service_worker": "background.js",
+    "preferred_environment": [
+      "document",
+      "service_worker"
+    ],
     "type": "module"
   },
   "icons": {
@@ -29,8 +34,12 @@
   "browser_specific_settings": {
     "gecko": {
       "id": "geo-page-audit@georgsimic.com",
-      "strict_min_version": "121.0"
+      "strict_min_version": "121.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
     }
-  },
-  "data_collection_permissions": []
+  }
 }

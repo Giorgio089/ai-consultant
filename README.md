@@ -35,7 +35,7 @@ You can find and install the extension via the Chrome Web Store (link coming soo
 3. Click **Load Temporary Add-on**.
 4. Select `/dist/firefox/manifest.json` from this repository.
 
-The Firefox manifest keeps the same runtime code, adds a stable `browser_specific_settings.gecko.id`, and intentionally omits `host_permissions`.
+The Firefox manifest keeps the same runtime code, adds a stable `browser_specific_settings.gecko.id`, declares `browser_specific_settings.gecko.data_collection_permissions`, and intentionally omits `host_permissions`.
 
 ## Usage
 
@@ -58,12 +58,12 @@ The extension does not request persistent host permissions and does not run site
 The shared runtime logic is self-contained using Manifest V3 and requires no build step during local development.
 Edit files inside the `extension` folder and reload the extension in Chrome or Firefox to update.
 
-- **`manifest.json`**: Chrome-default manifest for unpacked local development.
+- **`manifest.json`**: Cross-browser development manifest that includes Firefox-compatible background fallbacks and Gecko metadata.
 - **`manifest.chrome.json` / `manifest.firefox.json`**: Browser-specific release manifests.
 - **`popup.html/js`**: UI rendering and button logic.
 - **`audit/runAudit.js`**: Core HTML scraping, DOM checking, and scoring logic.
 
-Current extension version: `0.1.1`
+Current extension version: `0.1.2`
 
 ## Packaging
 
@@ -82,7 +82,7 @@ This generates:
 ## Mozilla Add-ons (AMO)
 
 Firefox releases should be packaged from `dist/firefox/` and reviewed against the AMO notes in [`docs/release/firefox-amo.md`](docs/release/firefox-amo.md).
-The Firefox package includes a Gecko ID and `data_collection_permissions`, while `host_permissions` is intentionally left out of the Firefox manifest.
+The Firefox package includes a Gecko ID and `browser_specific_settings.gecko.data_collection_permissions`, while `host_permissions` is intentionally left out of the Firefox manifest.
 
 ## License
 

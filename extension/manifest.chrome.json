@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "GEO Page Audit",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "Simple single page audit: Check SEO basics, LLM readability and structured data to find optimizations for better GEO visibility.",
   "permissions": [
     "activeTab",

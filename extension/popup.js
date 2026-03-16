@@ -159,7 +159,7 @@ function renderResults(data) {
 
 function renderBasicSEO(seo) {
     const container = $('#seoChecks');
-    container.innerHTML = '';
+    container.replaceChildren();
 
     // Title
     container.appendChild(
@@ -210,7 +210,7 @@ function renderBasicSEO(seo) {
 
 function renderLLMReadability(llm) {
     const container = $('#llmChecks');
-    container.innerHTML = '';
+    container.replaceChildren();
 
     container.appendChild(
         makeCheckItem(
@@ -233,7 +233,7 @@ function renderLLMReadability(llm) {
 
 function renderStructuredData(sd) {
     const container = $('#sdChecks');
-    container.innerHTML = '';
+    container.replaceChildren();
 
     // JSON-LD
     let jsonLdDetail = sd.jsonLd.exists
@@ -325,10 +325,4 @@ function truncate(str, max) {
     if (!str) return '';
     const clean = str.replace(/\s+/g, ' ').trim();
     return clean.length > max ? clean.slice(0, max) + '…' : clean;
-}
-
-function escapeHtml(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
 }
