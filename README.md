@@ -1,89 +1,158 @@
-# GEO Page Audit Browser Extension
+# 🤖 GEO Page Audit
 
-A lightweight, no-nonsense browser extension to instantly audit any webpage for GEO, basic SEO, LLM readability, and structured data. See possible optimizations to improve the site's GEO (Generative Engine Optimization) visibility.
+> *Because "my page is probably fine for AI crawlers" is not an SEO strategy.*
 
-## Features
+A lightweight, no-nonsense browser extension that instantly audits any webpage for **GEO** (Generative Engine Optimization), **SEO basics**, **LLM readability**, and **structured data** — directly in your browser, no account required, no data leaving your machine.
 
-✅ **Basic SEO Checks**
-- Title tag and Meta description length optimization
-- H1 and H2 heading structure layout
+Available for **Chrome** and **Firefox**. Install once, audit everything.
 
-✅ **LLM Readability Analysis**
+---
+
+## 📦 Install
+
+| Browser | Link |
+|---------|------|
+| 🦊 **Firefox** | [addons.mozilla.org/addon/geo-page-audit](https://addons.mozilla.org/addon/geo-page-audit/) |
+| 🌐 **Chrome** | Chrome Web Store *(coming soon)* |
+
+Or load it manually — see [Development Setup](#development--manual-load) below.
+
+---
+
+## ✨ What It Checks
+
+### 🔍 Basic SEO
+- Title tag & meta description length (is it too short? too long? just right?)
+- H1 and H2 heading structure — because "Welcome to Our Website" as your only H1 is not it
+
+### 🧠 LLM Readability
 - Text-to-code ratio estimation
-- Flags JS-heavy sites (React, Vue, Angular detection)
-- Helps gauge AI crawler accessibility
+- Detects JS-heavy frameworks (React, Vue, Angular) that AI crawlers tend to struggle with
+- Helps you gauge how accessible your content actually is to LLM-based search engines
 
-✅ **Structured Data Detection**
+### 🗂️ Structured Data
 - Validates JSON-LD schema markup
-- Checks for Open Graph & Twitter Cards
+- Checks for Open Graph & Twitter/X Cards
+- Flags missing or broken structured data that could hurt your AI visibility
 
-## Installation (from Chrome Web Store)
-You can find and install the extension via the Chrome Web Store (link coming soon).
+---
 
-## Installation (for Development / Manual Load)
+## 🚀 Usage
 
-1. Clone or download this repository.
-2. Open Chrome and navigate to `chrome://extensions/`.
-3. Enable **Developer mode** in the top right corner.
-4. Click **Load unpacked**.
-5. Select the `extension` folder in this repository.
+1. Navigate to any webpage
+2. Click the **🤖** extension icon in your toolbar
+3. Hit **Analyze This Page**
+4. Get an instant breakdown with actionable suggestions
+5. Use **Copy JSON** to export the results for further analysis or reporting
 
-## Firefox Development Load
+That's it. No login. No tracking. No "upgrade to Pro for full results."
 
-1. Run `node scripts/package-extension.mjs --browser=firefox`.
-2. Open Firefox and navigate to `about:debugging#/runtime/this-firefox`.
-3. Click **Load Temporary Add-on**.
-4. Select `/dist/firefox/manifest.json` from this repository.
+---
 
-The Firefox manifest keeps the same runtime code, adds a stable `browser_specific_settings.gecko.id`, declares `browser_specific_settings.gecko.data_collection_permissions`, and intentionally omits `host_permissions`.
+## 🔒 Permissions
 
-## Usage
+The extension requests the absolute minimum:
 
-1. Click on the extension icon (`🤖`) while on any web page.
-2. Click **Analyze This Page**.
-3. View the detailed audit breakdown and suggestions.
-4. Use **Copy JSON** to extract the data for further sharing or analysis.
+- **`activeTab`** — temporary access only to the tab you explicitly choose to analyze
+- **`scripting`** — reads the already-rendered DOM of the active page
 
-## Permissions
+No background snooping. No persistent host permissions. No analytics phoning home.
 
-The extension uses the smallest permission set needed for its current behavior:
+---
 
-- `activeTab`: grants temporary access only to the tab the user explicitly chooses to analyze.
-- `scripting`: reads the already rendered DOM of the active page so the audit can analyze live content.
+## 🛠️ Development & Manual Load
 
-The extension does not request persistent host permissions and does not run site analysis in the background.
+### Chrome
 
-## Development
+1. Clone this repository
+2. Open `chrome://extensions/`
+3. Enable **Developer mode** (top right)
+4. Click **Load unpacked** → select the `extension/` folder
 
-The shared runtime logic is self-contained using Manifest V3 and requires no build step during local development.
-Edit files inside the `extension` folder and reload the extension in Chrome or Firefox to update.
+### Firefox
 
-- **`manifest.json`**: Cross-browser development manifest that includes Firefox-compatible background fallbacks and Gecko metadata.
-- **`manifest.chrome.json` / `manifest.firefox.json`**: Browser-specific release manifests.
-- **`popup.html/js`**: UI rendering and button logic.
-- **`audit/runAudit.js`**: Core HTML scraping, DOM checking, and scoring logic.
+1. Run `node scripts/package-extension.mjs --browser=firefox`
+2. Open `about:debugging#/runtime/this-firefox`
+3. Click **Load Temporary Add-on**
+4. Select `dist/firefox/manifest.json`
 
-Current extension version: `0.1.2`
+> The Firefox build adds a stable Gecko ID, `browser_specific_settings.gecko.data_collection_permissions`, and intentionally omits `host_permissions` to comply with AMO requirements.
 
-## Packaging
+---
 
-Create browser-specific release folders with:
+## 📁 Project Structure
+
+```
+geo-llmo-audit-chrome-ext/
+├── extension/
+│   ├── audit/
+│   │   └── runAudit.js          — Core scraping, DOM analysis & scoring logic
+│   ├── popup.html / popup.js    — Extension UI
+│   ├── popup.css                — Styles
+│   ├── background.js            — Service worker
+│   ├── manifest.json            — Cross-browser dev manifest
+│   ├── manifest.chrome.json     — Chrome release manifest
+│   └── manifest.firefox.json    — Firefox release manifest
+├── scripts/
+│   └── package-extension.mjs   — Build script for browser-specific packaging
+├── dist/                        — Generated release folders (gitignored)
+│   ├── chrome/
+│   └── firefox/
+├── docs/
+│   └── release/
+│       └── firefox-amo.md       — AMO submission notes
+└── tests/                       — Unit tests
+```
+
+---
+
+## 📦 Packaging a Release
 
 ```bash
+# Generate browser-specific dist folders
 node scripts/package-extension.mjs --browser=chrome
 node scripts/package-extension.mjs --browser=firefox
 ```
 
-This generates:
+This produces:
+- `dist/chrome/` — ready for Chrome Web Store submission
+- `dist/firefox/` — ready for AMO submission (review notes in `docs/release/firefox-amo.md`)
 
-- `dist/chrome/manifest.json`
-- `dist/firefox/manifest.json`
+---
 
-## Mozilla Add-ons (AMO)
+## 🧪 Tests
 
-Firefox releases should be packaged from `dist/firefox/` and reviewed against the AMO notes in [`docs/release/firefox-amo.md`](docs/release/firefox-amo.md).
-The Firefox package includes a Gecko ID and `browser_specific_settings.gecko.data_collection_permissions`, while `host_permissions` is intentionally left out of the Firefox manifest.
+```bash
+npm test
+```
 
-## License
+Unit tests cover scoring logic, structured data detection, basic SEO checks, and DOM parsing.
 
-MIT License
+---
+
+## 🗺️ Roadmap
+
+- [x] Basic SEO checks (title, meta, headings)
+- [x] LLM readability analysis
+- [x] Structured data detection (JSON-LD, OG, Twitter Cards)
+- [x] JSON export
+- [x] Firefox / AMO support
+- [ ] Chrome Web Store listing
+- [ ] Score history / comparison across page versions
+- [ ] More GEO-specific checks (FAQ schema, citation signals, etc.)
+
+---
+
+## 🤝 Contributing
+
+PRs welcome. If you find a GEO signal worth checking that isn't covered yet — open an issue or just send the PR. The audit logic lives in `extension/audit/runAudit.js` and is deliberately self-contained and easy to extend.
+
+---
+
+## 📄 License
+
+MIT — use it, fork it, build on it.
+
+---
+
+*Current version: `0.1.2`*
