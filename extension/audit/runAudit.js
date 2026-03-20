@@ -163,16 +163,18 @@ export function checkLLMReadability(html, doc) {
 function extractJsonLdTypes(data) {
     const types = [];
 
-    if (data['@type']) {
-        types.push(Array.isArray(data['@type']) ? data['@type'].join(', ') : data['@type']);
-    }
+    const pushType = (item) => {
+        if (item['@type']) {
+            types.push(Array.isArray(item['@type']) ? item['@type'].join(', ') : item['@type']);
+        }
+    };
+
+    pushType(data);
 
     // Handle @graph pattern (e.g., Stripe)
     if (Array.isArray(data['@graph'])) {
         for (const item of data['@graph']) {
-            if (item['@type']) {
-                types.push(Array.isArray(item['@type']) ? item['@type'].join(', ') : item['@type']);
-            }
+            pushType(item);
         }
     }
 
