@@ -91,10 +91,10 @@ export function checkBasicSEO(doc) {
  */
 export function checkLLMReadability(html, doc) {
     const scriptTags = doc.querySelectorAll('script');
-    const scriptContent = Array.from(scriptTags).reduce(
-        (acc, script) => acc + script.textContent.length,
-        0,
-    );
+    let scriptContent = 0;
+    for (const script of scriptTags) {
+        scriptContent += script.textContent.length;
+    }
 
     const body = doc.querySelector('body');
     const textContent = body ? body.textContent.trim().length : 0;
