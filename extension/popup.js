@@ -321,7 +321,7 @@ function getScoreColor(score) {
     return '#f87171';
 }
 
-function truncate(str, max) {
+export function truncate(str, max) {
     if (!str) return '';
     const clean = str.replace(/\s+/g, ' ').trim();
     return clean.length > max ? clean.slice(0, max) + '…' : clean;
