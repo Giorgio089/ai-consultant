@@ -1,7 +1,10 @@
 {
   "type": "module",
   "scripts": {
-    "test": "node --test \"tests/*.test.mjs\" \"tests/*.test.js\""
+    "test": "node --test \"tests/*.test.mjs\" \"tests/*.test.js\"",
+    "build:chrome": "node scripts/package-extension.mjs --browser=chrome --zip",
+    "build:firefox": "node scripts/package-extension.mjs --browser=firefox --zip",
+    "lint:firefox": "npm run build:firefox && npx web-ext lint --source-dir dist/firefox"
   },
   "dependencies": {
     "jsdom": "^28.1.0"
