@@ -343,6 +343,67 @@ function renderBasicSEO(seo) {
             seo.h2.recommendation,
         ),
     );
+
+    // Heading hierarchy
+    if (seo.headingStructure) {
+        container.appendChild(
+            makeCheckItem(
+                seo.headingStructure.optimal ? 'good' : 'warn',
+                'Heading Structure',
+                seo.headingStructure.skips.length
+                    ? `Skipped levels: ${seo.headingStructure.skips.map((s) => `${s.from}→${s.to}`).join(', ')}`
+                    : `${seo.headingStructure.count} headings, no skipped levels`,
+                seo.headingStructure.recommendation,
+            ),
+        );
+    }
+
+    // Meta robots
+    if (seo.robots) {
+        const robotsDetail = [
+            seo.robots.exists ? `"${truncate(seo.robots.content, 60)}"` : 'No robots meta (indexable)',
+            seo.robots.dataNosnippetCount ? `${seo.robots.dataNosnippetCount} data-nosnippet element(s)` : null,
+        ].filter(Boolean).join(' · ');
+        container.appendChild(
+            makeCheckItem(seo.robots.status, 'Meta Robots', robotsDetail, seo.robots.recommendation),
+        );
+    }
+
+    // Canonical
+    if (seo.canonical) {
+        container.appendChild(
+            makeCheckItem(
+                seo.canonical.status === 'good' ? 'good' : 'warn',
+                'Canonical',
+                seo.canonical.exists ? truncate(seo.canonical.href, 70) : 'Missing',
+                seo.canonical.recommendation,
+            ),
+        );
+    }
+
+    // Language
+    if (seo.lang) {
+        container.appendChild(
+            makeCheckItem(
+                seo.lang.exists ? 'good' : 'warn',
+                'Language',
+                `${seo.lang.exists ? `lang="${seo.lang.value}"` : 'No lang attribute'} · ${seo.lang.hreflangCount} hreflang link(s)`,
+                seo.lang.recommendation,
+            ),
+        );
+    }
+
+    // Image alt text
+    if (seo.images && seo.images.total > 0) {
+        container.appendChild(
+            makeCheckItem(
+                seo.images.optimal ? 'good' : seo.images.ratio > 0.5 ? 'bad' : 'warn',
+                'Image Alt Text',
+                `${seo.images.total - seo.images.missingAlt}/${seo.images.total} images have alt text`,
+                seo.images.recommendation,
+            ),
+        );
+    }
 }
 
 // ─── LLM Readability ────────────────────────────────────────────────
@@ -357,7 +418,9 @@ function renderLLMReadability(llm) {
             llm.assessment,
             [
                 `Text: ${llm.textContentLength.toLocaleString()} chars`,
+                llm.mainContentLength != null ? `Main content: ${llm.mainContentLength.toLocaleString()} chars` : null,
                 `Scripts: ${llm.scriptContentLength.toLocaleString()} chars`,
+                llm.externalScriptCount ? `External scripts: ${llm.externalScriptCount}` : null,
                 `JS/Text ratio: ${llm.jsToTextRatio ?? 'N/A'}`,
                 llm.frameworkName ? `Framework: ${llm.frameworkName}` : null,
             ]
@@ -378,12 +441,46 @@ function renderStructuredData(sd) {
     let jsonLdDetail = sd.jsonLd.exists
         ? `${sd.jsonLd.count} schema(s)${sd.jsonLd.types.length ? ' — Types: ' + sd.jsonLd.types.join(', ') : ''}`
         : 'Not found';
-    if (sd.jsonLd.errors > 0) {
-        jsonLdDetail += ` (${sd.jsonLd.errors} invalid)`;
+    const invalidBlocks = sd.jsonLd.errors + (sd.jsonLd.empty || 0);
+    if (invalidBlocks > 0) {
+        jsonLdDetail += ` (${invalidBlocks} invalid)`;
     }
+    const jsonLdValid = sd.jsonLd.validCount ?? sd.jsonLd.count - sd.jsonLd.errors;
     container.appendChild(
-        makeCheckItem(sd.jsonLd.exists ? 'good' : 'bad', 'JSON-LD', jsonLdDetail, null),
+        makeCheckItem(jsonLdValid > 0 ? 'good' : 'bad', 'JSON-LD', jsonLdDetail, null),
     );
+
+    // Required schema fields
+    if (sd.requiredFields?.checked > 0) {
+        const issues = sd.requiredFields.issues;
+        container.appendChild(
+            makeCheckItem(
+                issues.length ? 'warn' : 'good',
+                'Schema Fields',
+                issues.length
+                    ? issues.map((i) => `${i.type}: missing ${i.missing.join(', ')}`).join(' · ')
+                    : `${sd.requiredFields.checked} schema(s) complete`,
+                null,
+            ),
+        );
+    }
+
+    // Author & date
+    if (sd.authorDate) {
+        const ad = sd.authorDate;
+        container.appendChild(
+            makeCheckItem(
+                ad.hasAuthor && ad.hasDate ? 'good' : 'warn',
+                'Author & Date',
+                [
+                    `Author: ${ad.author ? truncate(ad.author, 40) : 'not found'}`,
+                    `Published: ${ad.datePublished || 'not found'}`,
+                    ad.dateModified ? `Modified: ${ad.dateModified}` : null,
+                ].filter(Boolean).join(' · '),
+                null,
+            ),
+        );
+    }
 
     // Open Graph
     container.appendChild(
