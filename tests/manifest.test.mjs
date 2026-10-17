@@ -49,3 +49,16 @@ test('firefox manifest includes gecko id and data collection declaration', async
   assert.equal('data_collection_permissions' in manifest, false);
   assert.equal('host_permissions' in manifest, false);
 });
+
+test('chrome manifest uses minimal permissions', async () => {
+  const raw = await fs.readFile(
+    new URL('../extension/manifest.chrome.json', import.meta.url),
+    'utf8',
+  );
+  const manifest = JSON.parse(raw);
+
+  assert.equal(manifest.version, '0.2.0');
+  assert.deepEqual(manifest.permissions, ['activeTab', 'scripting', 'storage']);
+  assert.equal('host_permissions' in manifest, false);
+  assert.equal(manifest.background.service_worker, 'background.js');
+});
