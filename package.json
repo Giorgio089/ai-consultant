@@ -8,5 +8,8 @@
   },
   "dependencies": {
     "jsdom": "^28.1.0"
+  },
+  "devDependencies": {
+    "linkedom": "^0.18.13"
   }
 }
