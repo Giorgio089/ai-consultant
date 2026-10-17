@@ -56,6 +56,29 @@
         <div id="sdChecks" class="checks"></div>
       </details>
 
+      <!-- Detective (paid clue on datadetective.app) -->
+      <details class="section" open>
+        <summary>🕵️ AI Crawler Check <span class="section-score">Bot-View · 5 ct</span></summary>
+        <div class="checks">
+          <p class="check-detail detective-note">
+            Checks robots.txt, server response and visible text for GPTBot, ClaudeBot, PerplexityBot and more,
+            compared to what you see. Sends only this page's URL and its text length to datadetective.app.
+          </p>
+          <div id="keyRow" class="key-row hidden">
+            <input id="apiKeyInput" type="password" placeholder="API key (dd_…)" autocomplete="off" spellcheck="false">
+            <button id="saveKeyBtn" class="action-btn">Save</button>
+          </div>
+          <button id="detectiveBtn" class="analyze-btn detective-btn">Call the detective</button>
+          <div id="detectiveLoading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Interrogating crawlers…</p>
+          </div>
+          <p id="detectiveError" class="check-recommendation detective-message hidden"></p>
+          <div id="detectiveResults"></div>
+          <button id="forgetKeyBtn" class="link-btn hidden">Forget API key</button>
+        </div>
+      </details>
+
       <!-- Actions -->
       <div class="actions">
         <button id="copyJsonBtn" class="action-btn">📋 Copy JSON</button>

@@ -320,3 +320,51 @@ header h1 {
 .hidden {
   display: none !important;
 }
+
+/* ─── Detective ──────────────────────────────────────────────── */
+
+.detective-note {
+  padding-left: 0;
+  margin-bottom: 8px;
+}
+
+.detective-btn {
+  margin-top: 4px;
+}
+
+.detective-message {
+  padding-left: 0;
+}
+
+.key-row {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.key-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.key-row .action-btn {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+}
+
+.link-btn {
+  margin-top: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  font-size: 11px;
+  text-decoration: underline;
+  cursor: pointer;
+}

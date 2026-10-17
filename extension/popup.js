@@ -8,6 +8,7 @@
 
 import { runAudit } from './audit/runAudit.js';
 import { getBrowserApi } from './lib/browserApi.js';
+import { callBotView, getSettings, requestDataConsent, severityToStatus } from './lib/detective.js';
 
 // ─── DOM Elements ───────────────────────────────────────────────────
 
@@ -18,8 +19,16 @@ const errorEl = $('#error');
 const resultsEl = $('#results');
 const statusEl = $('#status');
 const copyJsonBtn = $('#copyJsonBtn');
+const detectiveBtn = $('#detectiveBtn');
+const detectiveLoadingEl = $('#detectiveLoading');
+const detectiveErrorEl = $('#detectiveError');
+const detectiveResultsEl = $('#detectiveResults');
+const keyRowEl = $('#keyRow');
+const apiKeyInput = $('#apiKeyInput');
+const forgetKeyBtn = $('#forgetKeyBtn');
 
 let lastResult = null;
+let lastTextLength = null;
 const browserApi = getBrowserApi();
 
 // ─── Analyze ────────────────────────────────────────────────────────
@@ -50,7 +59,8 @@ analyzeBtn.addEventListener('click', async () => {
         // Primary: Read the already-loaded DOM from the tab
         // → No additional HTTP request = no WAF/CORS/auth issues
         // → Also gets JS-rendered content!
-        const html = await getTabHTML(tab.id);
+        const { html, textLength } = await getTabHTML(tab.id);
+        lastTextLength = textLength;
 
         // Parse HTML in the popup context
         const parser = new DOMParser();
@@ -61,6 +71,7 @@ analyzeBtn.addEventListener('click', async () => {
 
         loadingEl.classList.add('hidden');
         lastResult = result;
+        resetDetective();
         renderResults(result);
     } catch (err) {
         loadingEl.classList.add('hidden');
@@ -76,10 +87,14 @@ async function getTabHTML(tabId) {
     try {
         const results = await browserApi.scripting.executeScript({
             target: { tabId },
-            func: () => document.documentElement.outerHTML,
+            func: () => ({
+                html: document.documentElement.outerHTML,
+                // Same normalization as datadetective's raw-HTML count, so both are comparable.
+                textLength: (document.body?.innerText || '').replace(/\s+/g, ' ').trim().length,
+            }),
         });
 
-        if (results && results[0] && results[0].result) {
+        if (results && results[0] && results[0].result?.html) {
             return results[0].result;
         }
         throw new Error('No HTML returned from tab.');
@@ -112,6 +127,130 @@ copyJsonBtn.addEventListener('click', async () => {
         }, 2000);
     }
 });
+
+// ─── Detective ──────────────────────────────────────────────────────
+
+detectiveBtn.addEventListener('click', () => {
+    // Consent first: Firefox only shows its prompt while the click is still being handled.
+    const consent = requestDataConsent();
+    runDetective(consent);
+});
+
+async function runDetective(consent) {
+    if (!lastResult) return;
+    if (!(await consent)) {
+        showDetectiveError('No problem: without your consent the URL stays in your browser.');
+        return;
+    }
+
+    const { apiKey, apiBase } = await getSettings(browserApi.storage.local);
+    detectiveErrorEl.classList.add('hidden');
+    detectiveResultsEl.replaceChildren();
+    detectiveLoadingEl.classList.remove('hidden');
+    detectiveBtn.disabled = true;
+
+    const outcome = await callBotView({
+        url: lastResult.url,
+        renderedTextLength: lastTextLength,
+        apiKey,
+        apiBase,
+    });
+
+    detectiveLoadingEl.classList.add('hidden');
+    detectiveBtn.disabled = false;
+
+    if (!outcome.ok) {
+        showDetectiveError(outcome.message);
+        if (outcome.reason === 'no_key' || outcome.reason === 'invalid_key') keyRowEl.classList.remove('hidden');
+        return;
+    }
+    lastResult.botView = outcome.data;
+    forgetKeyBtn.classList.remove('hidden');
+    renderBotView(outcome.data);
+}
+
+$('#saveKeyBtn').addEventListener('click', async () => {
+    const apiKey = apiKeyInput.value.trim();
+    if (!apiKey) return;
+    await browserApi.storage.local.set({ apiKey });
+    apiKeyInput.value = '';
+    keyRowEl.classList.add('hidden');
+    detectiveErrorEl.classList.add('hidden');
+    forgetKeyBtn.classList.remove('hidden');
+});
+
+forgetKeyBtn.addEventListener('click', async () => {
+    await browserApi.storage.local.remove('apiKey');
+    forgetKeyBtn.classList.add('hidden');
+    keyRowEl.classList.remove('hidden');
+});
+
+function resetDetective() {
+    delete lastResult?.botView;
+    detectiveResultsEl.replaceChildren();
+    detectiveErrorEl.classList.add('hidden');
+    getSettings(browserApi.storage.local).then(({ apiKey }) => {
+        keyRowEl.classList.toggle('hidden', !!apiKey);
+        forgetKeyBtn.classList.toggle('hidden', !apiKey);
+    });
+}
+
+function showDetectiveError(message) {
+    detectiveErrorEl.textContent = `⚠️ ${message}`;
+    detectiveErrorEl.classList.remove('hidden');
+}
+
+function renderBotView(data) {
+    detectiveResultsEl.replaceChildren();
+
+    for (const finding of data.findings) {
+        detectiveResultsEl.appendChild(
+            makeCheckItem(severityToStatus(finding.severity), capitalize(finding.severity), finding.message, null),
+        );
+    }
+    if (data.findings.length === 0) {
+        detectiveResultsEl.appendChild(
+            makeCheckItem('good', 'No issues found', 'AI crawlers get the same content you see.', null),
+        );
+    }
+
+    if (data.rawVisibilityRatio !== null) {
+        detectiveResultsEl.appendChild(
+            makeCheckItem(
+                data.rawVisibilityRatio >= 0.7 ? 'good' : data.rawVisibilityRatio >= 0.3 ? 'warn' : 'bad',
+                'Visible without JavaScript',
+                `${Math.round(data.rawVisibilityRatio * 100)} % of the rendered text is in the raw HTML`,
+                null,
+            ),
+        );
+    }
+
+    for (const bot of data.bots) {
+        const fetchInfo = !bot.fetch.tested
+            ? 'robots.txt token only'
+            : bot.fetch.error
+                ? `fetch failed: ${bot.fetch.error}`
+                : `HTTP ${bot.fetch.status}${bot.fetch.blocked ? ' (blocked)' : ''} · ${bot.fetch.textLength.toLocaleString()} chars`;
+        const robotsInfo = bot.robots.allowed === null
+            ? 'unknown'
+            : bot.robots.allowed ? 'allowed' : `disallowed (${bot.robots.rule})`;
+        const status = bot.robots.allowed === false || bot.fetch.blocked
+            ? 'bad'
+            : bot.robots.allowed === null ? 'warn' : 'good';
+        detectiveResultsEl.appendChild(
+            makeCheckItem(status, `${bot.token} · ${bot.operator}, ${bot.purpose}`, `robots.txt ${robotsInfo} · ${fetchInfo}`, null),
+        );
+    }
+
+    const caveat = document.createElement('p');
+    caveat.className = 'check-detail detective-note';
+    caveat.textContent = data.caveat;
+    detectiveResultsEl.appendChild(caveat);
+}
+
+function capitalize(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+}
 
 // ─── Error Display ──────────────────────────────────────────────────
 
