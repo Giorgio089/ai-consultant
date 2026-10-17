@@ -231,8 +231,12 @@ function renderBotView(data) {
             : bot.fetch.error
                 ? `fetch failed: ${bot.fetch.error}`
                 : `HTTP ${bot.fetch.status}${bot.fetch.blocked ? ' (blocked)' : ''} · ${bot.fetch.textLength.toLocaleString()} chars`;
-        const robotsInfo = bot.robots.allowed ? 'allowed' : `disallowed (${bot.robots.rule})`;
-        const status = !bot.robots.allowed || bot.fetch.blocked ? 'bad' : 'good';
+        const robotsInfo = bot.robots.allowed === null
+            ? 'unknown'
+            : bot.robots.allowed ? 'allowed' : `disallowed (${bot.robots.rule})`;
+        const status = bot.robots.allowed === false || bot.fetch.blocked
+            ? 'bad'
+            : bot.robots.allowed === null ? 'warn' : 'good';
         detectiveResultsEl.appendChild(
             makeCheckItem(status, `${bot.token} · ${bot.operator}, ${bot.purpose}`, `robots.txt ${robotsInfo} · ${fetchInfo}`, null),
         );

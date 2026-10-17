@@ -90,8 +90,11 @@ export function checkBasicSEO(doc) {
  * @returns {import('./schema.js').LLMReadabilityResult}
  */
 export function checkLLMReadability(html, doc) {
-    const scriptTags = doc.querySelectorAll('script');
-    const scriptContent = Array.from(scriptTags).reduce(
+    // Only executable scripts count; JSON-LD and other data blocks are not JavaScript.
+    const scriptTags = Array.from(doc.querySelectorAll('script')).filter((script) =>
+        /^(|text\/javascript|application\/javascript|module)$/i.test((script.getAttribute('type') || '').trim()),
+    );
+    const scriptContent = scriptTags.reduce(
         (acc, script) => acc + script.textContent.length,
         0,
     );
