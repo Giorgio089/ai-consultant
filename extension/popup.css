@@ -53,7 +53,7 @@ body {
   font: 13px/1.5 var(--sans);
   color: var(--text);
   background:
-    radial-gradient(ellipse 90% 40% at 80% -10%, var(--accent-glow), transparent 60%),
+    radial-gradient(ellipse 90% 40% at 80% -10%, var(--accent-glow), transparent 60%) no-repeat,
     var(--bg);
   -webkit-font-smoothing: antialiased;
   scrollbar-width: thin;

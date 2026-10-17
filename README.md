@@ -2,7 +2,7 @@
 
 > *Because "my page is probably fine for AI crawlers" is not an SEO strategy.*
 
-A lightweight, no-nonsense browser extension that instantly audits any webpage for **GEO** (Generative Engine Optimization), **SEO basics**, **LLM readability**, and **structured data** — directly in your browser, no account required, no data leaving your machine.
+A lightweight, no-nonsense browser extension that instantly audits any webpage for **GEO** (Generative Engine Optimization), **SEO basics**, **LLM readability**, and **structured data** — directly in your browser, no account required. The page audit runs locally; nothing leaves your machine unless you call the detective.
 
 Want to know what AI crawlers actually get? The optional **AI Crawler Check** asks [datadetective.app](https://datadetective.app), but only when you click it.
 
@@ -25,17 +25,22 @@ Or load it manually — see [Development Setup](#development--manual-load) below
 
 ### 🔍 Basic SEO
 - Title tag & meta description length (is it too short? too long? just right?)
-- H1 and H2 heading structure — because "Welcome to Our Website" as your only H1 is not it
+- H1 and H2 heading structure, plus skipped heading levels — because "Welcome to Our Website" as your only H1 is not it
+- Meta robots: `noindex`, `nosnippet` and tiny `max-snippet` values keep you out of AI answers
+- Canonical URL, `<html lang>` and hreflang
+- Images without alt text
 
 ### 🧠 LLM Readability
-- Text-to-code ratio estimation
-- Detects JS-heavy frameworks (React, Vue, Angular) that AI crawlers tend to struggle with
-- Helps you gauge how accessible your content actually is to LLM-based search engines
+- Visible text vs. inline JavaScript (scripts, styles and JSON-LD don't count as text)
+- Main content length (`<main>` / `<article>`) and thin-content warning
+- Flags empty app shells and names the framework (Next.js, Nuxt, React, Vue, Angular, …)
+- What AI crawlers get *without* JavaScript is what the AI Crawler Check measures
 
 ### 🗂️ Structured Data
-- Validates JSON-LD schema markup
-- Checks for Open Graph & Twitter/X Cards
-- Flags missing or broken structured data that could hurt your AI visibility
+- Parses JSON-LD (incl. `@graph` and top-level arrays); only valid blocks earn points
+- Checks key fields for common types (Article, Organization, Product, FAQPage)
+- Author and publish/modified date signals
+- Open Graph & Twitter/X Cards
 
 ### 🕵️ AI Crawler Check (optional, via datadetective.app)
 - robots.txt rules per AI crawler (GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, CCBot, Google-Extended)
@@ -48,10 +53,11 @@ Or load it manually — see [Development Setup](#development--manual-load) below
 ## 🚀 Usage
 
 1. Navigate to any webpage
-2. Click the **🤖** extension icon in your toolbar
-3. Hit **Analyze This Page**
+2. Click the **Data Detective** (magnifying glass) icon in your toolbar
+3. Hit **Investigate this page**
 4. Get an instant breakdown with actionable suggestions
-5. Use **Copy JSON** to export the results for further analysis or reporting
+5. Optional: **Call the detective** to see what AI crawlers get (needs an API key)
+6. Use **Copy case file (JSON)** to export the results for further analysis or reporting
 
 That's it. No login. No tracking. No "upgrade to Pro for full results." The free audit stays complete; the AI Crawler Check is a separate, optional extra.
 
@@ -80,14 +86,14 @@ together with your API key. Nothing else, never in the background. In Firefox th
 
 ### Chrome
 
-1. Clone this repository
+1. Clone this repository and run `npm run build:chrome`
 2. Open `chrome://extensions/`
 3. Enable **Developer mode** (top right)
-4. Click **Load unpacked** → select the `extension/` folder
+4. Click **Load unpacked** → select the `dist/chrome/` folder
 
 ### Firefox
 
-1. Run `node scripts/package-extension.mjs --browser=firefox`
+1. Run `npm run build:firefox`
 2. Open `about:debugging#/runtime/this-firefox`
 3. Click **Load Temporary Add-on**
 4. Select `dist/firefox/manifest.json`
@@ -99,19 +105,23 @@ together with your API key. Nothing else, never in the background. In Firefox th
 ## 📁 Project Structure
 
 ```
-geo-llmo-audit-chrome-ext/
+ai-consultant/
 ├── extension/
 │   ├── audit/
-│   │   └── runAudit.js          — Core scraping, DOM analysis & scoring logic
+│   │   ├── runAudit.js          — DOM analysis & scoring (also copied into the datadetective.app worker)
+│   │   └── schema.js            — Result types and SCHEMA_VERSION
+│   ├── lib/
+│   │   ├── browserApi.js        — chrome/browser shim
+│   │   └── detective.js         — Client for the datadetective.app clues
+│   ├── icons/                   — Toolbar icons and logo.svg
 │   ├── popup.html / popup.js    — Extension UI
-│   ├── popup.css                — Styles
-│   ├── background.js            — Service worker
-│   ├── manifest.json            — Cross-browser dev manifest
+│   ├── popup.css                — Styles (datadetective.app look)
+│   ├── manifest.json            — Dev manifest (mirrors the Firefox one)
 │   ├── manifest.chrome.json     — Chrome release manifest
 │   └── manifest.firefox.json    — Firefox release manifest
 ├── scripts/
 │   └── package-extension.mjs   — Build script for browser-specific packaging
-├── dist/                        — Generated release folders (gitignored)
+├── dist/                        — Generated release folders and zips (gitignored)
 │   ├── chrome/
 │   └── firefox/
 ├── docs/
@@ -125,14 +135,15 @@ geo-llmo-audit-chrome-ext/
 ## 📦 Packaging a Release
 
 ```bash
-# Generate browser-specific dist folders
-node scripts/package-extension.mjs --browser=chrome
-node scripts/package-extension.mjs --browser=firefox
+npm run build:chrome     # dist/chrome/ + dist/geo-page-audit-<version>-chrome.zip
+npm run build:firefox    # dist/firefox/ + dist/geo-page-audit-<version>-firefox.zip
+npm run lint:firefox     # web-ext lint on the Firefox build
 ```
 
-This produces:
-- `dist/chrome/` — ready for Chrome Web Store submission
-- `dist/firefox/` — ready for AMO submission (review notes in `docs/release/firefox-amo.md`)
+- `dist/chrome/` and its zip — ready for Chrome Web Store submission
+- `dist/firefox/` and its zip — ready for AMO submission (review notes in `docs/release/firefox-amo.md`)
+
+The script refuses to build if the three manifests disagree on the version.
 
 ---
 
@@ -142,7 +153,7 @@ This produces:
 npm test
 ```
 
-Unit tests cover scoring logic, structured data detection, basic SEO checks, and DOM parsing.
+Unit tests cover scoring, every check, the detective client (timeouts, bad answers, key allowlist), the popup (jsdom) and packaging. One test runs the engine under linkedom, the DOM the datadetective.app worker uses.
 
 ---
 
@@ -156,7 +167,8 @@ Unit tests cover scoring logic, structured data detection, basic SEO checks, and
 - [ ] Chrome Web Store listing
 - [ ] Score history / comparison across page versions
 - [x] AI crawler check via datadetective.app (opt-in)
-- [ ] More GEO-specific checks (FAQ schema, citation signals, etc.)
+- [x] GEO signals: meta robots, canonical, lang, author/date, schema key fields
+- [ ] Rendered-vs-raw diff and on-page overlay
 
 ---
 
