@@ -9,8 +9,8 @@ test('manifest uses minimal permissions for store submission', async () => {
     );
     const manifest = JSON.parse(rawManifest);
 
-    assert.equal(manifest.version, '0.1.2');
-    assert.deepEqual(manifest.permissions, ['activeTab', 'scripting']);
+    assert.equal(manifest.version, '0.2.0');
+    assert.deepEqual(manifest.permissions, ['activeTab', 'scripting', 'storage']);
     assert.equal('host_permissions' in manifest, false);
     assert.deepEqual(manifest.background.scripts, ['background.js']);
     assert.equal(manifest.background.service_worker, 'background.js');
@@ -18,6 +18,10 @@ test('manifest uses minimal permissions for store submission', async () => {
     assert.deepEqual(
         manifest.browser_specific_settings?.gecko?.data_collection_permissions?.required,
         ['none'],
+    );
+    assert.deepEqual(
+        manifest.browser_specific_settings?.gecko?.data_collection_permissions?.optional,
+        ['browsingActivity'],
     );
     assert.equal('data_collection_permissions' in manifest, false);
 });
@@ -29,7 +33,7 @@ test('firefox manifest includes gecko id and data collection declaration', async
   );
   const manifest = JSON.parse(raw);
 
-  assert.equal(manifest.version, '0.1.2');
+  assert.equal(manifest.version, '0.2.0');
   assert.ok(manifest.browser_specific_settings?.gecko?.id);
   assert.deepEqual(manifest.background.scripts, ['background.js']);
   assert.equal(manifest.background.service_worker, 'background.js');
@@ -37,6 +41,11 @@ test('firefox manifest includes gecko id and data collection declaration', async
     manifest.browser_specific_settings?.gecko?.data_collection_permissions?.required,
     ['none'],
   );
+  assert.deepEqual(
+    manifest.browser_specific_settings?.gecko?.data_collection_permissions?.optional,
+    ['browsingActivity'],
+  );
+  assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, '140.0');
   assert.equal('data_collection_permissions' in manifest, false);
   assert.equal('host_permissions' in manifest, false);
 });

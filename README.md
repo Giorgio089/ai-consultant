@@ -4,6 +4,8 @@
 
 A lightweight, no-nonsense browser extension that instantly audits any webpage for **GEO** (Generative Engine Optimization), **SEO basics**, **LLM readability**, and **structured data** — directly in your browser, no account required, no data leaving your machine.
 
+Want to know what AI crawlers actually get? The optional **AI Crawler Check** asks [datadetective.app](https://datadetective.app), but only when you click it.
+
 Available for **Chrome** and **Firefox**. Install once, audit everything.
 
 ---
@@ -35,6 +37,12 @@ Or load it manually — see [Development Setup](#development--manual-load) below
 - Checks for Open Graph & Twitter/X Cards
 - Flags missing or broken structured data that could hurt your AI visibility
 
+### 🕵️ AI Crawler Check (optional, via datadetective.app)
+- robots.txt rules per AI crawler (GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, CCBot, Google-Extended)
+- Server response per crawler: is your WAF or bot protection blocking them?
+- How much of the text you see is in the raw HTML, i.e. visible without JavaScript
+- Needs a datadetective API key (5 ct per check)
+
 ---
 
 ## 🚀 Usage
@@ -45,7 +53,7 @@ Or load it manually — see [Development Setup](#development--manual-load) below
 4. Get an instant breakdown with actionable suggestions
 5. Use **Copy JSON** to export the results for further analysis or reporting
 
-That's it. No login. No tracking. No "upgrade to Pro for full results."
+That's it. No login. No tracking. No "upgrade to Pro for full results." The free audit stays complete; the AI Crawler Check is a separate, optional extra.
 
 ---
 
@@ -55,8 +63,16 @@ The extension requests the absolute minimum:
 
 - **`activeTab`** — temporary access only to the tab you explicitly choose to analyze
 - **`scripting`** — reads the already-rendered DOM of the active page
+- **`storage`** — remembers your datadetective API key, locally
 
 No background snooping. No persistent host permissions. No analytics phoning home.
+
+### What leaves your browser
+
+The page audit runs entirely locally. Only when you click **Call the detective**, the extension sends
+**the page URL and the length of its visible text** (a number, not the text) to `datadetective.app`,
+together with your API key. Nothing else, never in the background. In Firefox this is declared as optional
+`browsingActivity` data collection, and Firefox asks for your consent on first use.
 
 ---
 
@@ -139,6 +155,7 @@ Unit tests cover scoring logic, structured data detection, basic SEO checks, and
 - [x] Firefox / AMO support
 - [ ] Chrome Web Store listing
 - [ ] Score history / comparison across page versions
+- [x] AI crawler check via datadetective.app (opt-in)
 - [ ] More GEO-specific checks (FAQ schema, citation signals, etc.)
 
 ---
@@ -155,4 +172,4 @@ MIT — use it, fork it, build on it.
 
 ---
 
-*Current version: `0.1.2`*
+*Current version: `0.2.0`*
