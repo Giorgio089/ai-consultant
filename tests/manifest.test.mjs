@@ -44,6 +44,8 @@ test('firefox manifest includes gecko id and data collection declaration', async
     ['browsingActivity'],
   );
   assert.equal(manifest.browser_specific_settings.gecko.strict_min_version, '140.0');
+  // data_collection_permissions needs Firefox for Android 142+.
+  assert.equal(manifest.browser_specific_settings.gecko_android?.strict_min_version, '142.0');
   assert.equal('data_collection_permissions' in manifest, false);
   assert.equal('host_permissions' in manifest, false);
 });

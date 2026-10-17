@@ -173,6 +173,14 @@ header h1 {
   to { transform: rotate(360deg); }
 }
 
+/* Firefox for Android opens the popup full screen: use the whole width, no inner scroll box. */
+@media (pointer: coarse) and (max-width: 600px) {
+  body {
+    width: auto;
+    max-height: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .spinner { animation-duration: 2.4s; }
   .analyze-btn, .action-btn, .section summary { transition: none; }

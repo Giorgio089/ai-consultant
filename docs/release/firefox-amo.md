@@ -14,6 +14,7 @@ The generated extension lives in `dist/firefox/` and uses `dist/firefox/manifest
 
 - Gecko ID: `geo-page-audit@georgsimic.com`
 - Minimum Firefox version: `140.0` (built-in data collection consent; required since 0.2.0)
+- Firefox for Android: `gecko_android.strict_min_version` `142.0` (first Android version with `data_collection_permissions`). Tick "Android" as a compatible platform when submitting.
 - `browser_specific_settings.gecko.data_collection_permissions.required`: `["none"]`
 - `browser_specific_settings.gecko.data_collection_permissions.optional`: `["browsingActivity"]`,
   requested via `browser.permissions.request()` when the user clicks **Call the detective**
