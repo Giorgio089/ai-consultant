@@ -1,17 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import { JSDOM } from 'jsdom';
 
 test('truncate', async (t) => {
-    // Setup minimal DOM required by popup.js
-    const dom = new JSDOM(`<!DOCTYPE html>
-    <div id="analyzeBtn"></div>
-    <div id="loading"></div>
-    <div id="error"></div>
-    <div id="results"></div>
-    <div id="status"></div>
-    <div id="copyJsonBtn"></div>
-    `);
+    // Load the real popup markup so every element popup.js wires up exists
+    const html = await fs.readFile(new URL('../extension/popup.html', import.meta.url), 'utf8');
+    const dom = new JSDOM(html);
 
     // Mock global browser APIs needed by popup.js on import
     globalThis.document = dom.window.document;

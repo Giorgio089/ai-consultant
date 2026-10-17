@@ -57,8 +57,8 @@ test('chrome manifest uses minimal permissions', async () => {
   );
   const manifest = JSON.parse(raw);
 
-  assert.equal(manifest.version, '0.1.2');
-  assert.deepEqual(manifest.permissions, ['activeTab', 'scripting']);
+  assert.equal(manifest.version, '0.2.0');
+  assert.deepEqual(manifest.permissions, ['activeTab', 'scripting', 'storage']);
   assert.equal('host_permissions' in manifest, false);
   assert.equal(manifest.background.service_worker, 'background.js');
 });
