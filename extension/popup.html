@@ -11,17 +11,21 @@
 <body>
   <div id="app">
     <header>
-      <h1>🤖 GEO Page Audit</h1>
-      <p class="subtitle">Audit the current page</p>
+      <a class="brand" href="https://datadetective.app/" target="_blank" rel="noopener">
+        <img src="icons/logo.svg" alt="" width="24" height="24">
+        <span>Data Detective</span>
+      </a>
+      <p class="kicker">Case file · GEO Page Audit</p>
+      <h1>What do crawlers see here?</h1>
     </header>
 
     <div id="status" class="status">
-      <button id="analyzeBtn" class="analyze-btn">Analyze This Page</button>
+      <button id="analyzeBtn" class="analyze-btn">Investigate this page</button>
     </div>
 
     <div id="loading" class="loading hidden">
       <div class="spinner"></div>
-      <p>Analyzing…</p>
+      <p>Examining the evidence…</p>
     </div>
 
     <div id="error" class="error hidden"></div>
@@ -40,25 +44,25 @@
 
       <!-- Basic SEO -->
       <details class="section" open>
-        <summary>📋 Basic SEO <span id="seoScore" class="section-score"></span></summary>
+        <summary>Exhibit A · Basic SEO <span id="seoScore" class="section-score"></span></summary>
         <div id="seoChecks" class="checks"></div>
       </details>
 
       <!-- LLM Readability -->
       <details class="section" open>
-        <summary>🤖 LLM Readability <span id="llmScore" class="section-score"></span></summary>
+        <summary>Exhibit B · LLM readability <span id="llmScore" class="section-score"></span></summary>
         <div id="llmChecks" class="checks"></div>
       </details>
 
       <!-- Structured Data -->
       <details class="section" open>
-        <summary>🏷️ Structured Data <span id="sdScore" class="section-score"></span></summary>
+        <summary>Exhibit C · Structured data <span id="sdScore" class="section-score"></span></summary>
         <div id="sdChecks" class="checks"></div>
       </details>
 
       <!-- Detective (paid clue on datadetective.app) -->
       <details class="section" open>
-        <summary>🕵️ AI Crawler Check <span class="section-score">Bot-View · 5 ct</span></summary>
+        <summary>The Bot-View clue <span class="section-score">5¢</span></summary>
         <div class="checks">
           <p class="check-detail detective-note">
             Checks robots.txt, server response and visible text for GPTBot, ClaudeBot, PerplexityBot and more,
@@ -81,9 +85,14 @@
 
       <!-- Actions -->
       <div class="actions">
-        <button id="copyJsonBtn" class="action-btn">📋 Copy JSON</button>
+        <button id="copyJsonBtn" class="action-btn">Copy case file (JSON)</button>
       </div>
     </div>
+
+    <footer class="foot">
+      <span>GEO Page Audit 0.2</span>
+      <a href="https://datadetective.app/" target="_blank" rel="noopener">datadetective.app</a>
+    </footer>
   </div>
 
   <script src="popup.js" type="module"></script>

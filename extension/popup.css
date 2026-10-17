@@ -1,18 +1,42 @@
-/* ─── AI SEO Consultant · Chrome Extension Popup ─────────────── */
+/* ─── GEO Page Audit · Popup · Data Detective "Noir" theme ─────────
+   Tokens mirror https://datadetective.app/styles.css (observed 2026-10-17).
+   No remote fonts or URLs (MV3 CSP): local system stacks only,
+   exactly like the site. */
 
 :root {
-  --bg: #0f0f14;
-  --surface: #1a1a24;
-  --surface-hover: #22222e;
-  --border: #2a2a3a;
-  --text: #e4e4ef;
-  --text-muted: #8888a0;
-  --accent: #7c5cfc;
-  --accent-glow: rgba(124, 92, 252, 0.25);
-  --green: #34d399;
-  --yellow: #fbbf24;
-  --red: #f87171;
-  --radius: 10px;
+  /* 1:1 from the website */
+  --bg: #0e0d0b;
+  --surface: #171512;
+  --surface-2: #1f1c18;
+  --border: #2e2a24;
+  --text: #ece6da;
+  --muted: #a39b8c;
+  --accent: #e8b44c;
+  --accent-ink: #1a1408;
+  --good: #7fcf9a;
+  --warn: #e8b44c;
+  --bad: #ef7d6d;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  /* popup-only additions (derived, not on the site) */
+  --border-strong: #6b6458;            /* 3.1:1 on --surface, for input outlines */
+  --accent-glow: rgba(232, 180, 76, 0.12);
+  --good-bg: rgba(127, 207, 154, 0.14);
+  --warn-bg: rgba(232, 180, 76, 0.14);
+  --bad-bg: rgba(239, 125, 109, 0.14);
+  --radius-sm: 6px;                    /* site: buttons, inputs */
+  --radius: 8px;                       /* site: cards, panels */
+
+  /* legacy aliases so nothing that still references old names breaks */
+  --surface-hover: var(--surface-2);
+  --text-muted: var(--muted);
+  --green: var(--good);
+  --yellow: var(--warn);
+  --red: var(--bad);
+
+  color-scheme: dark;
 }
 
 * {
@@ -26,17 +50,28 @@ body {
   min-height: 200px;
   max-height: 600px;
   overflow-y: auto;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  font-size: 13px;
+  font: 13px/1.5 var(--sans);
   color: var(--text);
-  background: var(--bg);
-  line-height: 1.5;
+  background:
+    radial-gradient(ellipse 90% 40% at 80% -10%, var(--accent-glow), transparent 60%),
+    var(--bg);
+  -webkit-font-smoothing: antialiased;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
 }
 
-/* Scrollbar */
 body::-webkit-scrollbar { width: 6px; }
 body::-webkit-scrollbar-track { background: transparent; }
 body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+a { color: var(--accent); }
+a:hover { text-decoration-thickness: 2px; }
+code { font-family: var(--mono); font-size: 0.9em; }
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
 
 #app {
   padding: 16px;
@@ -45,132 +80,168 @@ body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 /* ─── Header ─────────────────────────────────────────────────── */
 
 header {
-  text-align: center;
   margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* wordmark row */
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text);
+  text-decoration: none;
+  font: 600 15px var(--serif);
+  letter-spacing: 0.01em;
+}
+
+.brand img {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
+.kicker {
+  font: 10px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--accent);
+  margin-top: 10px;
 }
 
 header h1 {
-  font-size: 16px;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent), #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font: 600 20px/1.15 var(--serif);
+  color: var(--text);
+  letter-spacing: -0.005em;
+  margin-top: 2px;
 }
 
 .subtitle {
-  color: var(--text-muted);
+  color: var(--muted);
   font-size: 12px;
   margin-top: 2px;
 }
 
-/* ─── Analyze Button ─────────────────────────────────────────── */
+/* ─── Primary button (site .btn) ─────────────────────────────── */
+
+.status { margin-bottom: 12px; }
 
 .analyze-btn {
   display: block;
   width: 100%;
-  padding: 12px;
-  border: none;
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, var(--accent), #6d4aeb);
-  color: #fff;
-  font-size: 14px;
-  font-weight: 600;
+  padding: 10px 16px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: 600 14px var(--sans);
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 12px var(--accent-glow);
+  transition: filter 0.15s ease;
 }
 
-.analyze-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 4px 20px var(--accent-glow);
-}
-
-.analyze-btn:active {
-  transform: translateY(0);
-}
+.analyze-btn:hover { filter: brightness(1.08); }
 
 .analyze-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
+  opacity: 0.6;
+  cursor: wait;
+  filter: none;
 }
 
 /* ─── Loading ────────────────────────────────────────────────── */
 
 .loading {
   text-align: center;
-  padding: 32px 0;
-  color: var(--text-muted);
+  padding: 28px 0;
+  color: var(--muted);
+  font: 11px var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .spinner {
-  width: 32px;
-  height: 32px;
-  border: 3px solid var(--border);
+  width: 28px;
+  height: 28px;
+  border: 2px solid var(--border);
   border-top-color: var(--accent);
   border-radius: 50%;
   margin: 0 auto 12px;
-  animation: spin 0.8s linear infinite;
+  animation: spin 0.9s linear infinite;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .spinner { animation-duration: 2.4s; }
+  .analyze-btn, .action-btn, .section summary { transition: none; }
+}
+
 /* ─── Error ──────────────────────────────────────────────────── */
 
 .error {
-  background: rgba(248, 113, 113, 0.1);
-  border: 1px solid rgba(248, 113, 113, 0.3);
-  border-radius: var(--radius);
-  padding: 10px 14px;
-  color: var(--red);
+  background: var(--bad-bg);
+  border: 1px solid rgba(239, 125, 109, 0.35);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  color: var(--bad);
   font-size: 12px;
   margin-top: 12px;
 }
 
-/* ─── Score Section ──────────────────────────────────────────── */
+/* ─── Score (site .score: serif 600) ─────────────────────────── */
 
 .score-section {
-  text-align: center;
-  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .score-circle {
-  width: 80px;
-  height: 80px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
-  border: 4px solid var(--border);
+  border: 3px solid var(--border);   /* .score-good/-warn/-bad set the colour */
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 8px;
+  flex-shrink: 0;
   transition: border-color 0.3s ease;
 }
 
 .score-value {
-  font-size: 28px;
-  font-weight: 800;
+  font: 600 28px/1 var(--serif);
+  font-variant-numeric: lining-nums tabular-nums;
 }
 
 .score-label {
-  font-size: 12px;
-  color: var(--text-muted);
+  font: 600 15px/1.3 var(--serif);
+  color: var(--text);
 }
 
+/* set by popup.js on #scoreCircle and #scoreValue */
+.score-good { color: var(--good); border-color: var(--good) !important; }
+.score-warn { color: var(--warn); border-color: var(--warn) !important; }
+.score-bad  { color: var(--bad);  border-color: var(--bad)  !important; }
+
 .audit-url {
-  font-size: 11px;
-  color: var(--text-muted);
-  text-align: center;
-  margin-bottom: 16px;
+  font: 11px var(--mono);
+  color: var(--muted);
+  margin-bottom: 12px;
   word-break: break-all;
   padding: 6px 10px;
   background: var(--surface);
-  border-radius: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
 }
 
-/* ─── Sections ───────────────────────────────────────────────── */
+/* ─── Sections (site .card / .faq details) ───────────────────── */
 
 .section {
   background: var(--surface);
@@ -180,62 +251,58 @@ header h1 {
   overflow: hidden;
 }
 
+/* detective section = site .card.featured */
+.section:has(#detectiveBtn) {
+  border-color: var(--accent);
+  background: var(--surface-2);
+}
+
 .section summary {
-  padding: 10px 14px;
-  font-weight: 600;
-  font-size: 13px;
+  padding: 10px 12px;
+  font: 600 14px var(--serif);
   cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   user-select: none;
   list-style: none;
   transition: background 0.15s ease;
 }
 
-.section summary:hover {
-  background: var(--surface-hover);
-}
-
-.section summary::-webkit-details-marker {
-  display: none;
-}
+.section summary:hover { background: var(--surface-2); }
+.section summary::-webkit-details-marker { display: none; }
 
 .section summary::after {
   content: '▸';
-  margin-left: auto;
-  color: var(--text-muted);
-  font-size: 11px;
+  color: var(--muted);
+  font: 11px var(--sans);
   transition: transform 0.2s ease;
 }
 
-.section[open] summary::after {
-  transform: rotate(90deg);
-}
+.section[open] summary::after { transform: rotate(90deg); }
 
 .section-score {
   margin-left: auto;
-  font-size: 11px;
-  font-weight: 700;
+  font: 600 11px var(--mono);
+  color: var(--accent);
   padding: 2px 6px;
+  border: 1px solid var(--border);
   border-radius: 4px;
-  background: var(--border);
+  background: var(--bg);
 }
 
 .checks {
-  padding: 4px 14px 12px;
+  padding: 2px 12px 12px;
 }
 
-/* ─── Check Items ────────────────────────────────────────────── */
+/* ─── Check items (site .result-list li) ─────────────────────── */
 
 .check-item {
   padding: 8px 0;
   border-top: 1px solid var(--border);
 }
 
-.check-item:first-child {
-  border-top: none;
-}
+.check-item:first-child { border-top: none; }
 
 .check-header {
   display: flex;
@@ -252,40 +319,30 @@ header h1 {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 10px;
+  font: 700 10px/1 var(--sans);
   flex-shrink: 0;
 }
 
-.status-good {
-  background: rgba(52, 211, 153, 0.15);
-  color: var(--green);
-}
-
-.status-warn {
-  background: rgba(251, 191, 36, 0.15);
-  color: var(--yellow);
-}
-
-.status-bad {
-  background: rgba(248, 113, 113, 0.15);
-  color: var(--red);
-}
+.status-good { background: var(--good-bg); color: var(--good); }
+.status-warn { background: var(--warn-bg); color: var(--warn); border-radius: 4px; }
+.status-bad  { background: var(--bad-bg);  color: var(--bad); }
 
 .check-detail {
   font-size: 11px;
-  color: var(--text-muted);
-  margin-top: 4px;
+  color: var(--muted);
+  margin-top: 3px;
   padding-left: 26px;
+  overflow-wrap: anywhere;
 }
 
 .check-recommendation {
   font-size: 11px;
-  color: var(--yellow);
-  margin-top: 4px;
+  color: var(--accent);
+  margin-top: 3px;
   padding-left: 26px;
 }
 
-/* ─── Actions ────────────────────────────────────────────────── */
+/* ─── Secondary buttons (site .btn.ghost, toned down) ────────── */
 
 .actions {
   margin-top: 12px;
@@ -295,31 +352,45 @@ header h1 {
 
 .action-btn {
   flex: 1;
-  padding: 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
   color: var(--text);
-  font-size: 12px;
+  font: 600 12px var(--sans);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .action-btn:hover {
-  background: var(--surface-hover);
   border-color: var(--accent);
+  color: var(--accent);
 }
 
 .action-btn.copied {
-  border-color: var(--green);
-  color: var(--green);
+  border-color: var(--good);
+  color: var(--good);
 }
+
+/* ─── Footer ─────────────────────────────────────────────────── */
+
+.foot {
+  margin-top: 16px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.foot a { color: var(--muted); }
+.foot a:hover { color: var(--accent); }
 
 /* ─── Utility ────────────────────────────────────────────────── */
 
-.hidden {
-  display: none !important;
-}
+.hidden { display: none !important; }
 
 /* ─── Detective ──────────────────────────────────────────────── */
 
@@ -328,13 +399,9 @@ header h1 {
   margin-bottom: 8px;
 }
 
-.detective-btn {
-  margin-top: 4px;
-}
+.detective-btn { margin-top: 4px; }
 
-.detective-message {
-  padding-left: 0;
-}
+.detective-message { padding-left: 0; }
 
 .key-row {
   display: flex;
@@ -345,12 +412,19 @@ header h1 {
 .key-row input {
   flex: 1;
   min-width: 0;
-  padding: 7px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--surface);
+  padding: 7px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
   color: var(--text);
-  font-size: 12px;
+  font: 12px var(--mono);
+}
+
+.key-row input::placeholder { color: var(--muted); }
+
+.key-row input:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 .key-row .action-btn {
@@ -363,8 +437,10 @@ header h1 {
   padding: 0;
   border: 0;
   background: none;
-  color: var(--text-muted);
+  color: var(--muted);
   font-size: 11px;
   text-decoration: underline;
   cursor: pointer;
 }
+
+.link-btn:hover { color: var(--accent); }
