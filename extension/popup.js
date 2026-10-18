@@ -1,5 +1,5 @@
 /**
- * AI SEO Consultant — Popup UI Controller
+ * GEO Page Audit — Popup UI Controller
  *
  * Handles button clicks, fetches HTML, runs audit,
  * and renders results. All logic runs in the popup
@@ -27,13 +27,32 @@ const keyRowEl = $('#keyRow');
 const apiKeyInput = $('#apiKeyInput');
 const forgetKeyBtn = $('#forgetKeyBtn');
 
+const ANALYZE_LABEL = 'Investigate this page';
+const REANALYZE_LABEL = 'Investigate again';
+const COPY_LABEL = 'Copy case file (JSON)';
+
 let lastResult = null;
 let lastTextLength = null;
+let analyzing = false;
+let detectiveBusy = false;
 const browserApi = getBrowserApi();
 
 // ─── Analyze ────────────────────────────────────────────────────────
 
 analyzeBtn.addEventListener('click', async () => {
+    // Synchronous lock: no second run while one (or a paid detective call) is in flight.
+    if (analyzing || detectiveBusy) return;
+    analyzing = true;
+    analyzeBtn.disabled = true;
+    try {
+        await analyze();
+    } finally {
+        analyzing = false;
+        analyzeBtn.disabled = detectiveBusy;
+    }
+});
+
+async function analyze() {
     // Get current tab
     const [tab] = await browserApi.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id || !tab?.url) {
@@ -45,7 +64,7 @@ analyzeBtn.addEventListener('click', async () => {
 
     // Validate URL
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        showError('Only http:// and https:// pages can be analyzed.');
+        showError('Only http:// and https:// pages can be investigated.');
         return;
     }
 
@@ -73,11 +92,15 @@ analyzeBtn.addEventListener('click', async () => {
         lastResult = result;
         resetDetective();
         renderResults(result);
+
+        // Keep the button around so the page can be re-examined after it changes.
+        analyzeBtn.textContent = REANALYZE_LABEL;
+        statusEl.classList.remove('hidden');
     } catch (err) {
         loadingEl.classList.add('hidden');
-        showError(`Analysis failed: ${err.message}`);
+        showError(`Investigation failed: ${err.message}`);
     }
-});
+}
 
 /**
  * Get the full HTML from the current tab via content script injection.
@@ -99,10 +122,9 @@ async function getTabHTML(tabId) {
         }
         throw new Error('No HTML returned from tab.');
     } catch (err) {
-        // Fallback: direct fetch (might fail on WAF-protected sites)
-        console.warn('Script injection failed, falling back to fetch:', err.message);
+        console.warn('Script injection failed:', err.message);
         throw new Error(
-            `Could not read this page. ${err.message}. Try refreshing the page and analyzing again.`
+            `Could not read this page. ${err.message}. Try refreshing the page and investigating again.`
         );
     }
 }
@@ -114,16 +136,16 @@ copyJsonBtn.addEventListener('click', async () => {
 
     try {
         await navigator.clipboard.writeText(JSON.stringify(lastResult, null, 2));
-        copyJsonBtn.textContent = '✅ Copied!';
+        copyJsonBtn.textContent = 'Copied.';
         copyJsonBtn.classList.add('copied');
         setTimeout(() => {
-            copyJsonBtn.textContent = '📋 Copy JSON';
+            copyJsonBtn.textContent = COPY_LABEL;
             copyJsonBtn.classList.remove('copied');
         }, 2000);
     } catch (err) {
-        copyJsonBtn.textContent = '❌ Failed';
+        copyJsonBtn.textContent = 'Copy failed.';
         setTimeout(() => {
-            copyJsonBtn.textContent = '📋 Copy JSON';
+            copyJsonBtn.textContent = COPY_LABEL;
         }, 2000);
     }
 });
@@ -131,42 +153,52 @@ copyJsonBtn.addEventListener('click', async () => {
 // ─── Detective ──────────────────────────────────────────────────────
 
 detectiveBtn.addEventListener('click', () => {
-    // Consent first: Firefox only shows its prompt while the click is still being handled.
-    const consent = requestDataConsent();
-    runDetective(consent);
+    // Synchronous busy-lock before any await: a double click must never trigger two paid calls.
+    if (detectiveBusy || analyzing || !lastResult) return;
+    detectiveBusy = true;
+    detectiveBtn.disabled = true;
+    analyzeBtn.disabled = true;
+    // runDetective asks for consent before its first await, i.e. still inside the user gesture.
+    runDetective(lastResult);
 });
 
-async function runDetective(consent) {
-    if (!lastResult) return;
-    if (!(await consent)) {
-        showDetectiveError('No problem: without your consent the URL stays in your browser.');
-        return;
+async function runDetective(target) {
+    try {
+        // Consent first: Firefox only shows its prompt while the click is still being handled.
+        const consent = requestDataConsent();
+        if (!(await consent)) {
+            showDetectiveError('No problem: without your consent the URL stays in your browser.');
+            return;
+        }
+
+        const { apiKey, apiBase } = await getSettings(browserApi.storage.local);
+        detectiveErrorEl.classList.add('hidden');
+        detectiveResultsEl.replaceChildren();
+        detectiveLoadingEl.classList.remove('hidden');
+
+        const outcome = await callBotView({
+            url: target.url,
+            renderedTextLength: lastTextLength,
+            apiKey,
+            apiBase,
+        });
+
+        if (!outcome?.ok) {
+            showDetectiveError(outcome?.message || 'The detective came back empty-handed.');
+            if (outcome?.reason === 'no_key' || outcome?.reason === 'invalid_key') keyRowEl.classList.remove('hidden');
+            return;
+        }
+        target.botView = outcome.data;
+        forgetKeyBtn.classList.remove('hidden');
+        renderBotView(outcome.data);
+    } catch (err) {
+        showDetectiveError(`Something went wrong: ${err?.message ?? err}`);
+    } finally {
+        detectiveLoadingEl.classList.add('hidden');
+        detectiveBusy = false;
+        detectiveBtn.disabled = false;
+        analyzeBtn.disabled = analyzing;
     }
-
-    const { apiKey, apiBase } = await getSettings(browserApi.storage.local);
-    detectiveErrorEl.classList.add('hidden');
-    detectiveResultsEl.replaceChildren();
-    detectiveLoadingEl.classList.remove('hidden');
-    detectiveBtn.disabled = true;
-
-    const outcome = await callBotView({
-        url: lastResult.url,
-        renderedTextLength: lastTextLength,
-        apiKey,
-        apiBase,
-    });
-
-    detectiveLoadingEl.classList.add('hidden');
-    detectiveBtn.disabled = false;
-
-    if (!outcome.ok) {
-        showDetectiveError(outcome.message);
-        if (outcome.reason === 'no_key' || outcome.reason === 'invalid_key') keyRowEl.classList.remove('hidden');
-        return;
-    }
-    lastResult.botView = outcome.data;
-    forgetKeyBtn.classList.remove('hidden');
-    renderBotView(outcome.data);
 }
 
 $('#saveKeyBtn').addEventListener('click', async () => {
@@ -192,60 +224,74 @@ function resetDetective() {
     getSettings(browserApi.storage.local).then(({ apiKey }) => {
         keyRowEl.classList.toggle('hidden', !!apiKey);
         forgetKeyBtn.classList.toggle('hidden', !apiKey);
-    });
+    }).catch(() => {});
 }
 
 function showDetectiveError(message) {
-    detectiveErrorEl.textContent = `⚠️ ${message}`;
+    detectiveErrorEl.textContent = message;
     detectiveErrorEl.classList.remove('hidden');
 }
 
-function renderBotView(data) {
+export function renderBotView(data) {
     detectiveResultsEl.replaceChildren();
 
-    for (const finding of data.findings) {
+    const findings = Array.isArray(data?.findings) ? data.findings : [];
+    const bots = Array.isArray(data?.bots) ? data.bots : [];
+
+    for (const finding of findings) {
+        const severity = typeof finding?.severity === 'string' && finding.severity ? finding.severity : 'note';
         detectiveResultsEl.appendChild(
-            makeCheckItem(severityToStatus(finding.severity), capitalize(finding.severity), finding.message, null),
+            makeCheckItem(severityToStatus(severity), capitalize(severity), finding?.message ?? '', null),
         );
     }
-    if (data.findings.length === 0) {
+    if (findings.length === 0) {
         detectiveResultsEl.appendChild(
-            makeCheckItem('good', 'No issues found', 'AI crawlers get the same content you see.', null),
+            makeCheckItem('good', 'Nothing suspicious', 'AI crawlers get the same content you see.', null),
         );
     }
 
-    if (data.rawVisibilityRatio !== null) {
+    const ratio = data?.rawVisibilityRatio;
+    if (typeof ratio === 'number' && Number.isFinite(ratio)) {
         detectiveResultsEl.appendChild(
             makeCheckItem(
-                data.rawVisibilityRatio >= 0.7 ? 'good' : data.rawVisibilityRatio >= 0.3 ? 'warn' : 'bad',
+                ratio >= 0.7 ? 'good' : ratio >= 0.3 ? 'warn' : 'bad',
                 'Visible without JavaScript',
-                `${Math.round(data.rawVisibilityRatio * 100)} % of the rendered text is in the raw HTML`,
+                `${Math.round(ratio * 100)} % of the rendered text is in the raw HTML`,
                 null,
             ),
         );
     }
 
-    for (const bot of data.bots) {
-        const fetchInfo = !bot.fetch.tested
+    for (const bot of bots) {
+        const fetchInfo = bot?.fetch ?? {};
+        const robots = bot?.robots ?? {};
+        const allowed = typeof robots.allowed === 'boolean' ? robots.allowed : null;
+        const chars = typeof fetchInfo.textLength === 'number' ? `${fetchInfo.textLength.toLocaleString()} chars` : 'length unknown';
+        const fetchText = !fetchInfo.tested
             ? 'robots.txt token only'
-            : bot.fetch.error
-                ? `fetch failed: ${bot.fetch.error}`
-                : `HTTP ${bot.fetch.status}${bot.fetch.blocked ? ' (blocked)' : ''} · ${bot.fetch.textLength.toLocaleString()} chars`;
-        const robotsInfo = bot.robots.allowed === null
+            : fetchInfo.error
+                ? `fetch failed: ${fetchInfo.error}`
+                : `HTTP ${fetchInfo.status ?? '?'}${fetchInfo.blocked ? ' (blocked)' : ''} · ${chars}`;
+        const robotsText = allowed === null
             ? 'unknown'
-            : bot.robots.allowed ? 'allowed' : `disallowed (${bot.robots.rule})`;
-        const status = bot.robots.allowed === false || bot.fetch.blocked
+            : allowed ? 'allowed' : `disallowed${robots.rule ? ` (${robots.rule})` : ''}`;
+        const status = allowed === false || fetchInfo.blocked
             ? 'bad'
-            : bot.robots.allowed === null ? 'warn' : 'good';
+            : allowed === null ? 'warn' : 'good';
+        const label = [bot?.token ?? 'Unknown bot', [bot?.operator, bot?.purpose].filter(Boolean).join(', ')]
+            .filter(Boolean)
+            .join(' · ');
         detectiveResultsEl.appendChild(
-            makeCheckItem(status, `${bot.token} · ${bot.operator}, ${bot.purpose}`, `robots.txt ${robotsInfo} · ${fetchInfo}`, null),
+            makeCheckItem(status, label, `robots.txt ${robotsText} · ${fetchText}`, null),
         );
     }
 
-    const caveat = document.createElement('p');
-    caveat.className = 'check-detail detective-note';
-    caveat.textContent = data.caveat;
-    detectiveResultsEl.appendChild(caveat);
+    if (typeof data?.caveat === 'string' && data.caveat) {
+        const caveat = document.createElement('p');
+        caveat.className = 'check-detail detective-note';
+        caveat.textContent = data.caveat;
+        detectiveResultsEl.appendChild(caveat);
+    }
 }
 
 function capitalize(str) {
@@ -256,12 +302,14 @@ function capitalize(str) {
 
 function showError(message) {
     loadingEl.classList.add('hidden');
-    errorEl.textContent = `⚠️ ${message}`;
+    errorEl.textContent = message;
     errorEl.classList.remove('hidden');
     statusEl.classList.remove('hidden');
 }
 
 // ─── Render Results ─────────────────────────────────────────────────
+
+const SCORE_CLASSES = ['score-good', 'score-warn', 'score-bad'];
 
 function renderResults(data) {
     resultsEl.classList.remove('hidden');
@@ -269,16 +317,16 @@ function renderResults(data) {
     // Score
     const total = data.score.total;
     const color = getScoreColor(total);
+    const scoreClass = getScoreClass(total);
 
+    for (const el of [$('#scoreCircle'), $('#scoreValue')]) {
+        el.classList.remove(...SCORE_CLASSES);
+        el.classList.add(scoreClass);
+    }
     $('#scoreCircle').style.borderColor = color;
     $('#scoreValue').textContent = total;
     $('#scoreValue').style.color = color;
-    $('#scoreLabel').textContent =
-        total >= 80
-            ? '🎉 Excellent!'
-            : total >= 60
-                ? '👍 Good, room for improvement'
-                : '⚠️ Needs work';
+    $('#scoreLabel').textContent = getScoreLabel(total);
 
     $('#auditUrl').textContent = data.url;
 
@@ -343,6 +391,67 @@ function renderBasicSEO(seo) {
             seo.h2.recommendation,
         ),
     );
+
+    // Heading hierarchy
+    if (seo.headingStructure) {
+        container.appendChild(
+            makeCheckItem(
+                seo.headingStructure.optimal ? 'good' : 'warn',
+                'Heading Structure',
+                seo.headingStructure.skips.length
+                    ? `Skipped levels: ${seo.headingStructure.skips.map((s) => `${s.from}→${s.to}`).join(', ')}`
+                    : `${seo.headingStructure.count} headings, no skipped levels`,
+                seo.headingStructure.recommendation,
+            ),
+        );
+    }
+
+    // Meta robots
+    if (seo.robots) {
+        const robotsDetail = [
+            seo.robots.exists ? `"${truncate(seo.robots.content, 60)}"` : 'No robots meta (indexable)',
+            seo.robots.dataNosnippetCount ? `${seo.robots.dataNosnippetCount} data-nosnippet element(s)` : null,
+        ].filter(Boolean).join(' · ');
+        container.appendChild(
+            makeCheckItem(seo.robots.status, 'Meta Robots', robotsDetail, seo.robots.recommendation),
+        );
+    }
+
+    // Canonical
+    if (seo.canonical) {
+        container.appendChild(
+            makeCheckItem(
+                seo.canonical.status === 'good' ? 'good' : 'warn',
+                'Canonical',
+                seo.canonical.exists ? truncate(seo.canonical.href, 70) : 'Missing',
+                seo.canonical.recommendation,
+            ),
+        );
+    }
+
+    // Language
+    if (seo.lang) {
+        container.appendChild(
+            makeCheckItem(
+                seo.lang.exists ? 'good' : 'warn',
+                'Language',
+                `${seo.lang.exists ? `lang="${seo.lang.value}"` : 'No lang attribute'} · ${seo.lang.hreflangCount} hreflang link(s)`,
+                seo.lang.recommendation,
+            ),
+        );
+    }
+
+    // Image alt text
+    if (seo.images && seo.images.total > 0) {
+        container.appendChild(
+            makeCheckItem(
+                seo.images.optimal ? 'good' : seo.images.ratio > 0.5 ? 'bad' : 'warn',
+                'Image Alt Text',
+                `${seo.images.total - seo.images.missingAlt}/${seo.images.total} images have alt text`,
+                seo.images.recommendation,
+            ),
+        );
+    }
 }
 
 // ─── LLM Readability ────────────────────────────────────────────────
@@ -357,7 +466,9 @@ function renderLLMReadability(llm) {
             llm.assessment,
             [
                 `Text: ${llm.textContentLength.toLocaleString()} chars`,
+                llm.mainContentLength != null ? `Main content: ${llm.mainContentLength.toLocaleString()} chars` : null,
                 `Scripts: ${llm.scriptContentLength.toLocaleString()} chars`,
+                llm.externalScriptCount ? `External scripts: ${llm.externalScriptCount}` : null,
                 `JS/Text ratio: ${llm.jsToTextRatio ?? 'N/A'}`,
                 llm.frameworkName ? `Framework: ${llm.frameworkName}` : null,
             ]
@@ -378,12 +489,46 @@ function renderStructuredData(sd) {
     let jsonLdDetail = sd.jsonLd.exists
         ? `${sd.jsonLd.count} schema(s)${sd.jsonLd.types.length ? ' — Types: ' + sd.jsonLd.types.join(', ') : ''}`
         : 'Not found';
-    if (sd.jsonLd.errors > 0) {
-        jsonLdDetail += ` (${sd.jsonLd.errors} invalid)`;
+    const invalidBlocks = sd.jsonLd.errors + (sd.jsonLd.empty || 0);
+    if (invalidBlocks > 0) {
+        jsonLdDetail += ` (${invalidBlocks} invalid)`;
     }
+    const jsonLdValid = sd.jsonLd.validCount ?? sd.jsonLd.count - sd.jsonLd.errors;
     container.appendChild(
-        makeCheckItem(sd.jsonLd.exists ? 'good' : 'bad', 'JSON-LD', jsonLdDetail, null),
+        makeCheckItem(jsonLdValid > 0 ? 'good' : 'bad', 'JSON-LD', jsonLdDetail, null),
     );
+
+    // Required schema fields
+    if (sd.requiredFields?.checked > 0) {
+        const issues = sd.requiredFields.issues;
+        container.appendChild(
+            makeCheckItem(
+                issues.length ? 'warn' : 'good',
+                'Schema Fields',
+                issues.length
+                    ? issues.map((i) => `${i.type}: missing ${i.missing.join(', ')}`).join(' · ')
+                    : `${sd.requiredFields.checked} schema(s) complete`,
+                null,
+            ),
+        );
+    }
+
+    // Author & date
+    if (sd.authorDate) {
+        const ad = sd.authorDate;
+        container.appendChild(
+            makeCheckItem(
+                ad.hasAuthor && ad.hasDate ? 'good' : 'warn',
+                'Author & Date',
+                [
+                    `Author: ${ad.author ? truncate(ad.author, 40) : 'not found'}`,
+                    `Published: ${ad.datePublished || 'not found'}`,
+                    ad.dateModified ? `Modified: ${ad.dateModified}` : null,
+                ].filter(Boolean).join(' · '),
+                null,
+            ),
+        );
+    }
 
     // Open Graph
     container.appendChild(
@@ -410,7 +555,7 @@ function renderStructuredData(sd) {
         const recEl = document.createElement('p');
         recEl.className = 'check-recommendation';
         recEl.style.paddingLeft = '0';
-        recEl.textContent = `💡 ${sd.recommendation}`;
+        recEl.textContent = `→ ${sd.recommendation}`;
         container.appendChild(recEl);
     }
 }
@@ -421,7 +566,7 @@ function makeCheckItem(status, title, detail, recommendation) {
     const div = document.createElement('div');
     div.className = 'check-item';
 
-    const icon = status === 'good' ? '✓' : status === 'warn' ? '⚠' : '✗';
+    const icon = status === 'good' ? '✓' : status === 'warn' ? '!' : '✗';
 
     const header = document.createElement('div');
     header.className = 'check-header';
@@ -447,17 +592,29 @@ function makeCheckItem(status, title, detail, recommendation) {
     if (recommendation) {
         const recP = document.createElement('p');
         recP.className = 'check-recommendation';
-        recP.textContent = '💡 ' + recommendation;
+        recP.textContent = '→ ' + recommendation;
         div.appendChild(recP);
     }
 
     return div;
 }
 
-function getScoreColor(score) {
-    if (score >= 80) return '#34d399';
-    if (score >= 60) return '#fbbf24';
-    return '#f87171';
+export function getScoreColor(score) {
+    if (score >= 80) return '#7fcf9a';
+    if (score >= 60) return '#e8b44c';
+    return '#ef7d6d';
+}
+
+export function getScoreClass(score) {
+    if (score >= 80) return 'score-good';
+    if (score >= 60) return 'score-warn';
+    return 'score-bad';
+}
+
+export function getScoreLabel(score) {
+    if (score >= 80) return 'Case closed. Clean.';
+    if (score >= 60) return 'A few loose ends.';
+    return "Something's off here.";
 }
 
 export function truncate(str, max) {

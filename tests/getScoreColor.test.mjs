@@ -18,22 +18,22 @@ test('getScoreColor', async (t) => {
         return getScoreColor;
     `)();
 
-    await t.test('returns green (#34d399) for scores 80 and above', () => {
-        assert.equal(getScoreColor(100), '#34d399');
-        assert.equal(getScoreColor(80), '#34d399');
-        assert.equal(getScoreColor(85), '#34d399');
+    await t.test('returns green (#7fcf9a) for scores 80 and above', () => {
+        assert.equal(getScoreColor(100), '#7fcf9a');
+        assert.equal(getScoreColor(80), '#7fcf9a');
+        assert.equal(getScoreColor(85), '#7fcf9a');
     });
 
-    await t.test('returns yellow (#fbbf24) for scores between 60 and 79', () => {
-        assert.equal(getScoreColor(79), '#fbbf24');
-        assert.equal(getScoreColor(60), '#fbbf24');
-        assert.equal(getScoreColor(70), '#fbbf24');
+    await t.test('returns amber (#e8b44c) for scores between 60 and 79', () => {
+        assert.equal(getScoreColor(79), '#e8b44c');
+        assert.equal(getScoreColor(60), '#e8b44c');
+        assert.equal(getScoreColor(70), '#e8b44c');
     });
 
-    await t.test('returns red (#f87171) for scores below 60', () => {
-        assert.equal(getScoreColor(59), '#f87171');
-        assert.equal(getScoreColor(0), '#f87171');
-        assert.equal(getScoreColor(30), '#f87171');
-        assert.equal(getScoreColor(-10), '#f87171');
+    await t.test('returns red (#ef7d6d) for scores below 60', () => {
+        assert.equal(getScoreColor(59), '#ef7d6d');
+        assert.equal(getScoreColor(0), '#ef7d6d');
+        assert.equal(getScoreColor(30), '#ef7d6d');
+        assert.equal(getScoreColor(-10), '#ef7d6d');
     });
 });

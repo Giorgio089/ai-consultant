@@ -1,19 +1,41 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 
+/**
+ * Builds a store-ready copy of the extension.
+ *
+ * Usage: node scripts/package-extension.mjs --browser=chrome|firefox [--out=<dir>] [--zip]
+ *   --out  target directory (default: dist/)
+ *   --zip  also writes <out>/geo-page-audit-<version>-<browser>.zip for store upload
+ */
+
+const execFileAsync = promisify(execFile);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const rootDir = path.resolve(__dirname, '..');
 const extensionDir = path.join(rootDir, 'extension');
-const distDir = path.join(rootDir, 'dist');
 
-const browserArg = process.argv.find((arg) => arg.startsWith('--browser='));
-const browser = browserArg?.split('=')[1];
+const argValue = (name) => process.argv.find((arg) => arg.startsWith(`--${name}=`))?.split('=')[1];
+const browser = argValue('browser');
+const distDir = path.resolve(argValue('out') ?? path.join(rootDir, 'dist'));
+const withZip = process.argv.includes('--zip');
 
 if (!['chrome', 'firefox'].includes(browser)) {
-  throw new Error('Usage: node scripts/package-extension.mjs --browser=chrome|firefox');
+  throw new Error('Usage: node scripts/package-extension.mjs --browser=chrome|firefox [--out=<dir>] [--zip]');
 }
+
+// All manifests must agree on the version, otherwise the stores get mismatched builds.
+const manifestNames = ['manifest.json', 'manifest.chrome.json', 'manifest.firefox.json'];
+const versions = await Promise.all(
+  manifestNames.map(async (name) => JSON.parse(await fs.readFile(path.join(extensionDir, name), 'utf8')).version),
+);
+if (new Set(versions).size !== 1) {
+  throw new Error(`Manifest versions differ: ${manifestNames.map((n, i) => `${n}=${versions[i]}`).join(', ')}`);
+}
+const version = versions[0];
 
 const targetDir = path.join(distDir, browser);
 const sourceManifestPath = path.join(extensionDir, `manifest.${browser}.json`);
@@ -39,3 +61,11 @@ await fs.cp(extensionDir, targetDir, {
 
 const manifest = await fs.readFile(sourceManifestPath, 'utf8');
 await fs.writeFile(targetManifestPath, manifest);
+
+if (withZip) {
+  const zipPath = path.join(distDir, `geo-page-audit-${version}-${browser}.zip`);
+  await fs.rm(zipPath, { force: true });
+  // -X drops extra file attributes so the archive is reproducible across machines.
+  await execFileAsync('zip', ['-r', '-X', '-q', zipPath, '.'], { cwd: targetDir });
+  console.log(zipPath);
+}
