@@ -164,7 +164,7 @@ Unit tests cover scoring, every check, the detective client (timeouts, bad answe
 - [x] Structured data detection (JSON-LD, OG, Twitter Cards)
 - [x] JSON export
 - [x] Firefox / AMO support
-- [ ] Chrome Web Store listing
+- [x] Chrome Web Store listing
 - [ ] Score history / comparison across page versions
 - [x] AI crawler check via datadetective.app (opt-in)
 - [x] GEO signals: meta robots, canonical, lang, author/date, schema key fields
