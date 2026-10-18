@@ -9,6 +9,9 @@
  * local HTTP inside an <iframe>, with chrome.* and fetch mocked. The sample site
  * ("Northwind Coffee Roasters", northwind-coffee.example) is fictional.
  *
+ * The slide builder is shared: docs/store/firefox-amo/generate.cjs requires this
+ * module and renders the same slides with its own LAYOUT (4:3, Firefox-style frame).
+ *
  * All PNGs are flattened to 24-bit RGB (no alpha) via Python/Pillow, as the
  * Chrome Web Store requires.
  *
@@ -119,6 +122,8 @@ const SCENARIOS = {
     5: { path: '/', html: HOME_HTML, textLength: 5600, open: [3], scrollTo: 3, detective: true },
 };
 
+// Slide copy. Store reviewers treat long lists of product, bot or framework names
+// as keyword spam: never name more than two of them in a row here.
 const SLIDES = [
     {
         kicker: 'Case file · GEO Page Audit',
@@ -136,21 +141,33 @@ const SLIDES = [
         kicker: 'Exhibit B · LLM readability',
         title: 'Catch the empty app shell.',
         sub: 'Most AI crawlers don’t run JavaScript. The audit flags thin, script-rendered pages and names the framework.',
-        points: ['Visible text vs. inline script', 'Main content length', 'Next.js, Nuxt, React & more'],
+        points: ['Visible text vs. inline script', 'Main content length', 'Detects JavaScript frameworks'],
     },
     {
         kicker: 'Exhibit C · Structured data',
         title: 'Schema that AI answers can cite.',
         sub: 'JSON-LD types and their key fields, author and dates, Open Graph and Twitter Cards at a glance.',
-        points: ['Article, Product, FAQ, Organization', 'Author, published & modified', 'Open Graph & Twitter Cards'],
+        points: ['Schema types like Article and FAQ', 'Author, published & modified', 'Open Graph & Twitter Cards'],
     },
     {
         kicker: 'The Bot-View clue · optional · 5¢',
         title: 'Is GPTBot locked out?',
-        sub: 'Robots.txt, server response and what is visible without JavaScript, checked for GPTBot, ClaudeBot, PerplexityBot and more.',
+        sub: 'Robots.txt, server response and what is visible without JavaScript, checked for AI crawlers like GPTBot and ClaudeBot.',
         points: ['Only on click, with your API key', 'Sends just the URL + text length', 'Powered by datadetective.app'],
     },
 ];
+
+// ─── Layout per store ────────────────────────────────────────────────
+// All values in CSS px. `scale` is the deviceScaleFactor of the screenshot.
+
+const CHROME_LAYOUT = {
+    width: 1280, height: 800, scale: 1,
+    frame: 'chromium',
+    copy: { left: 72, width: 470 },
+    browser: { left: 600, top: 40, width: 760 },
+    // height: visible popup height (600 is the maximum Chrome allows); zoom: popup scale on the slide
+    popup: { right: 42, top: 130, height: 600, zoom: 1.08, caretRight: 62, caretTop: 122 },
+};
 
 // ─── Shared styles ───────────────────────────────────────────────────
 
@@ -164,12 +181,9 @@ html,body{background:var(--bg);color:var(--text);font-family:var(--sans);-webkit
 .serif{font-family:var(--serif);font-weight:600}
 `;
 
-// Visible popup height (CSS px): the maximum Chrome allows for action popups.
-const POPUP_H = 600;
-
 const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
-function siteMock(scenario) {
+function siteMock() {
     return `
 <div class="site">
   <div class="site-nav"><b>NORTHWIND</b><span>Coffee Roasters</span><i></i><em>Shop</em><em>Guides</em><em>Journal</em><em>Cart (0)</em></div>
@@ -181,25 +195,11 @@ function siteMock(scenario) {
 </div>`;
 }
 
-function slideHtml(n) {
-    const s = SLIDES[n - 1];
-    const sc = SCENARIOS[n];
-    return `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}
-body{width:1280px;height:800px;position:relative;
- background:radial-gradient(ellipse 60% 55% at 78% 30%,rgba(232,180,76,.16),transparent 70%),
-            radial-gradient(ellipse 50% 60% at 0% 100%,rgba(232,180,76,.06),transparent 70%),var(--bg)}
-.copy{position:absolute;left:72px;top:0;bottom:0;width:470px;display:flex;flex-direction:column;justify-content:center}
-.brand{position:absolute;top:47px;left:0;display:flex;align-items:center;gap:12px;font-family:var(--serif);font-weight:600;font-size:22px}
-.brand svg{width:34px;height:34px}
-.copy .kicker{font-size:14px;margin-bottom:22px}
-.copy h1{font-family:var(--serif);font-weight:600;font-size:54px;line-height:1.08;letter-spacing:-.01em;margin-bottom:24px}
-.copy .sub{font-size:20px;line-height:1.5;color:var(--muted);margin-bottom:34px}
-.copy ul{list-style:none;border-top:1px solid var(--border)}
-.copy li{font-size:17px;padding:13px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
-.copy li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(232,180,76,.15);flex:none}
-/* browser mock */
-.browser{position:absolute;left:600px;top:40px;width:760px;height:800px;border-radius:12px 0 0 0;overflow:hidden;
- background:#e9e4da;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06)}
+// Browser window chrome around the sample site: { css, html } for the top bar.
+const FRAMES = {
+    // Chromium-like: traffic-light dots, trapezoid tab, pill omnibox.
+    chromium: (sc) => ({
+        css: `
 .bar{height:84px;background:#25221d;border-bottom:1px solid #3a352d}
 .tabs{height:40px;display:flex;align-items:flex-end;padding-left:84px;position:relative}
 .dots{position:absolute;left:18px;top:15px;display:flex;gap:8px}.dots i{width:12px;height:12px;border-radius:50%;background:#4a443a}
@@ -209,7 +209,70 @@ body{width:1280px;height:800px;position:relative;
 .omni{flex:1;height:30px;border-radius:15px;background:#1c1a16;display:flex;align-items:center;padding:0 16px;font-size:14px;color:#cfc8ba}
 .omni span{color:#8b8477}
 .ext{width:30px;height:30px;border-radius:7px;display:grid;place-items:center;background:rgba(232,180,76,.18);box-shadow:0 0 0 1px rgba(232,180,76,.5)}
-.ext svg{width:22px;height:22px}
+.ext svg{width:22px;height:22px}`,
+        html: `
+  <div class="bar">
+    <div class="tabs"><div class="dots"><i></i><i></i><i></i></div><div class="tab"><i></i>Northwind Coffee Roasters</div></div>
+    <div class="addr"><div class="omni">northwind-coffee.example<span>${esc(sc.path === '/' ? '' : sc.path)}</span></div><div class="ext">${LOGO}</div></div>
+  </div>`,
+    }),
+    // Firefox-like (generic, no logos): floating rounded tab, nav buttons, square-ish URL bar, menu button.
+    firefox: (sc) => {
+        const ico = (d) => `<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${d}</svg>`;
+        return {
+            css: `
+.bar{height:86px;background:#1b1915;border-bottom:1px solid #3a352d}
+.tabs{height:42px;display:flex;align-items:center;gap:4px;padding:0 6px}
+.tab{height:34px;width:236px;background:#36322b;border-radius:6px;display:flex;align-items:center;gap:9px;padding:0 10px 0 12px;font-size:13px;color:#e4ddcf;
+ box-shadow:0 0 0 1px rgba(255,255,255,.06),0 1px 4px rgba(0,0,0,.45)}
+.tab i{width:14px;height:14px;border-radius:3px;background:#8a5a2b;flex:none}
+.tab span{flex:1;white-space:nowrap;overflow:hidden}
+.tab svg,.newtab svg{width:12px;height:12px;color:#a39b8c}
+.newtab{width:30px;height:30px;display:grid;place-items:center;border-radius:4px}.newtab svg{width:14px;height:14px}
+.addr{height:44px;display:flex;align-items:center;gap:4px;padding:0 8px;background:#36322b}
+.btn-ico{width:32px;height:32px;display:grid;place-items:center;border-radius:4px;color:#cfc8ba}.btn-ico svg{width:16px;height:16px}
+.btn-ico.off{color:#6f685c}
+.omni{flex:1;height:32px;margin:0 6px;border-radius:6px;background:#1c1a16;display:flex;align-items:center;gap:9px;padding:0 12px;font-size:14px;color:#cfc8ba}
+.omni svg{width:14px;height:14px;color:#a39b8c;flex:none}
+.omni span{color:#8b8477}
+.ext{width:32px;height:32px;border-radius:4px;display:grid;place-items:center;background:rgba(232,180,76,.18);box-shadow:0 0 0 1px rgba(232,180,76,.5)}
+.ext svg{width:20px;height:20px}`,
+            html: `
+  <div class="bar">
+    <div class="tabs"><div class="tab"><i></i><span>Northwind Coffee Roasters</span>${ico('<path d="M4 4l8 8M12 4l-8 8"/>')}</div><div class="newtab">${ico('<path d="M8 3v10M3 8h10"/>')}</div></div>
+    <div class="addr">
+      <div class="btn-ico">${ico('<path d="M13 8H3M7 4L3 8l4 4"/>')}</div>
+      <div class="btn-ico off">${ico('<path d="M3 8h10M9 4l4 4-4 4"/>')}</div>
+      <div class="btn-ico">${ico('<path d="M13 8a5 5 0 1 1-1.5-3.6M13 2.5v3h-3"/>')}</div>
+      <div class="omni">${ico('<rect x="3.5" y="7" width="9" height="6.5" rx="1.2"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>')}<div>northwind-coffee.example<span>${esc(sc.path === '/' ? '' : sc.path)}</span></div></div>
+      <div class="ext">${LOGO}</div>
+      <div class="btn-ico">${ico('<path d="M2.5 4h11M2.5 8h11M2.5 12h11"/>')}</div>
+    </div>
+  </div>`,
+        };
+    },
+};
+
+function slideHtml(n, L = CHROME_LAYOUT, s = SLIDES[n - 1], sc = SCENARIOS[n]) {
+    const P = L.popup;
+    const frame = FRAMES[L.frame](sc);
+    return `<!doctype html><html><head><meta charset="utf-8"><style>${BASE_CSS}
+body{width:${L.width}px;height:${L.height}px;position:relative;
+ background:radial-gradient(ellipse 60% 55% at 78% 30%,rgba(232,180,76,.16),transparent 70%),
+            radial-gradient(ellipse 50% 60% at 0% 100%,rgba(232,180,76,.06),transparent 70%),var(--bg)}
+.copy{position:absolute;left:${L.copy.left}px;top:0;bottom:0;width:${L.copy.width}px;display:flex;flex-direction:column;justify-content:center}
+.brand{position:absolute;top:47px;left:0;display:flex;align-items:center;gap:12px;font-family:var(--serif);font-weight:600;font-size:22px}
+.brand svg{width:34px;height:34px}
+.copy .kicker{font-size:14px;margin-bottom:22px}
+.copy h1{font-family:var(--serif);font-weight:600;font-size:54px;line-height:1.08;letter-spacing:-.01em;margin-bottom:24px}
+.copy .sub{font-size:20px;line-height:1.5;color:var(--muted);margin-bottom:34px}
+.copy ul{list-style:none;border-top:1px solid var(--border)}
+.copy li{font-size:17px;padding:13px 0;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px}
+.copy li::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(232,180,76,.15);flex:none}
+/* browser mock */
+.browser{position:absolute;left:${L.browser.left}px;top:${L.browser.top}px;width:${L.browser.width}px;height:${L.height}px;border-radius:12px 0 0 0;overflow:hidden;
+ background:#e9e4da;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06)}
+${frame.css}
 .site{filter:blur(1.2px) brightness(.62) saturate(.9);color:#2b2018;padding:0 40px}
 .site-nav{display:flex;align-items:center;gap:10px;height:64px;font-size:15px;border-bottom:1px solid #d5cdbf}
 .site-nav b{letter-spacing:.2em}.site-nav i{flex:1}.site-nav em{font-style:normal;margin-left:20px}
@@ -222,10 +285,10 @@ body{width:1280px;height:800px;position:relative;
 .bag-label{background:#f4efe6;padding:16px 20px;border-radius:6px;text-align:center;letter-spacing:.2em;font-size:14px}
 .site-cards{display:flex;gap:20px}.site-cards div{flex:1;height:180px;border-radius:10px;background:linear-gradient(160deg,#cdb89a,#9b7a55)}
 /* popup */
-.popup-wrap{position:absolute;right:42px;top:130px;width:${380 * 1.08}px;height:${POPUP_H * 1.08}px;border-radius:10px;overflow:hidden;
+.popup-wrap{position:absolute;right:${P.right}px;top:${P.top}px;width:${380 * P.zoom}px;height:${P.height * P.zoom}px;border-radius:10px;overflow:hidden;
  box-shadow:0 24px 70px rgba(0,0,0,.75),0 0 0 1px rgba(232,180,76,.35)}
-.popup-wrap iframe{width:380px;height:${POPUP_H}px;border:0;transform:scale(1.08);transform-origin:0 0;display:block;background:var(--bg)}
-.caret{position:absolute;right:${42 + 20}px;top:122px;width:16px;height:16px;transform:rotate(45deg);background:#0e0d0b;box-shadow:-1px -1px 0 rgba(232,180,76,.35)}
+.popup-wrap iframe{width:380px;height:${P.height}px;border:0;transform:scale(${P.zoom});transform-origin:0 0;display:block;background:var(--bg)}
+.caret{position:absolute;right:${P.caretRight}px;top:${P.caretTop}px;width:16px;height:16px;transform:rotate(45deg);background:#0e0d0b;box-shadow:-1px -1px 0 rgba(232,180,76,.35)}
 </style></head><body>
 <div class="copy">
   <div class="brand">${LOGO}<span>Data Detective</span></div>
@@ -234,12 +297,8 @@ body{width:1280px;height:800px;position:relative;
   <p class="sub">${esc(s.sub)}</p>
   <ul>${s.points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>
 </div>
-<div class="browser">
-  <div class="bar">
-    <div class="tabs"><div class="dots"><i></i><i></i><i></i></div><div class="tab"><i></i>Northwind Coffee Roasters</div></div>
-    <div class="addr"><div class="omni">northwind-coffee.example<span>${esc(sc.path === '/' ? '' : sc.path)}</span></div><div class="ext">${LOGO}</div></div>
-  </div>
-  ${siteMock(sc)}
+<div class="browser">${frame.html}
+  ${siteMock()}
 </div>
 <div class="caret"></div>
 <div class="popup-wrap"><iframe src="/extension/popup.html?s=${n}"></iframe></div>
@@ -281,7 +340,7 @@ h1{font-family:var(--serif);font-weight:600;font-size:92px;line-height:1;letter-
 <p class="kicker k">Case file · Generative engine optimization</p>
 <h1>GEO Page Audit</h1>
 <p class="by">by Data Detective</p>
-<p class="tag">What do GPTBot, ClaudeBot and PerplexityBot see on your page? One click, right in the browser.</p>
+<p class="tag">What do AI crawlers like GPTBot see on your page? One click, right in the browser.</p>
 </div>
 <div class="mark">${LOGO}</div>
 </body></html>`;
@@ -289,7 +348,7 @@ h1{font-family:var(--serif);font-weight:600;font-size:92px;line-height:1;letter-
 
 // ─── Mocks injected into every frame ─────────────────────────────────
 
-function initMocks({ scenarios, botView }) {
+function initMocks({ scenarios, botView, maxHeight }) {
     if (!location.pathname.endsWith('/popup.html')) return;
     const sc = scenarios[new URLSearchParams(location.search).get('s')] || scenarios[1];
     const api = {
@@ -303,22 +362,23 @@ function initMocks({ scenarios, botView }) {
     // Local fallback for the serif stack (Georgia/Palatino are not installed on Linux CI boxes).
     document.addEventListener('DOMContentLoaded', () => {
         const st = document.createElement('style');
-        st.textContent = ':root{--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,Caladea,serif}';
+        st.textContent = ':root{--serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,Caladea,serif}'
+            + (maxHeight ? `body{max-height:${maxHeight}px}` : ''); // taller popup body for layouts with more room
         document.head.appendChild(st);
     });
 }
 
-// ─── Run ─────────────────────────────────────────────────────────────
+// ─── Rendering ───────────────────────────────────────────────────────
 
 const TYPES = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png' };
 
-function serve() {
+// Serves the given pages at /__page/<i> and the extension/ folder as static files.
+function serve(pages) {
     return new Promise((resolve) => {
         const srv = http.createServer((req, res) => {
             const u = new URL(req.url, 'http://x');
-            let m;
-            if ((m = u.pathname.match(/^\/__slide\/(\d)$/))) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(slideHtml(+m[1])); }
-            if ((m = u.pathname.match(/^\/__promo\/(small|marquee)$/))) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(promoHtml(m[1])); }
+            const m = u.pathname.match(/^\/__page\/(\d+)$/);
+            if (m && pages[+m[1]] !== undefined) { res.writeHead(200, { 'content-type': 'text/html' }); return res.end(pages[+m[1]]); }
             const f = path.join(REPO, path.normalize(decodeURIComponent(u.pathname)));
             if (!f.startsWith(path.join(REPO, 'extension'))) { res.writeHead(404); return res.end(); }
             fs.readFile(f, (e, d) => {
@@ -335,9 +395,53 @@ function flattenRgb(files) {
     process.stdout.write(execFileSync('python3', ['-c', py, ...files]).toString());
 }
 
-(async () => {
-    fs.mkdirSync(OUT, { recursive: true });
-    const srv = await serve();
+// One render job per screenshot slide.
+function slideJobs(layout, { slides = SLIDES, scenarios = SCENARIOS } = {}) {
+    return [1, 2, 3, 4, 5].map((n) => ({
+        file: `screenshot-${n}.png`,
+        html: slideHtml(n, layout, slides[n - 1], scenarios[n]),
+        width: layout.width, height: layout.height, scale: layout.scale,
+        slide: n, scenarios, fitPopup: !!layout.popup.fit,
+        popupHeight: layout.popup.height > 600 ? layout.popup.height : undefined, // taller than Chrome's 600 max
+    }));
+}
+
+// Drives the real popup inside a slide: run the audit, optionally the Bot-View, then open/scroll sections.
+// With fitHeight (CSS px), the popup first shrinks to the content below the scroll position (like a
+// real popup sizes itself to its content), so the scroll target is never clamped.
+async function preparePopup(page, sc, fitHeight) {
+    const frame = page.frames().find((f) => f.url().includes('popup.html'));
+    await frame.waitForSelector('#analyzeBtn');
+    await frame.click('#analyzeBtn');
+    await frame.waitForSelector('#results:not(.hidden)');
+    if (sc.detective) {
+        await frame.click('#detectiveBtn');
+        await frame.waitForFunction(() => document.querySelectorAll('#detectiveResults .check-item, #detectiveResults > *').length > 3);
+    }
+    const { y, contentH } = await frame.evaluate(({ open, scrollTo, scrollPad }) => {
+        const secs = [...document.querySelectorAll('details.section')];
+        secs.forEach((d, i) => { d.open = open.includes(i); });
+        document.activeElement?.blur();
+        const y = scrollTo === null ? 0 : Math.max(0, secs[scrollTo].getBoundingClientRect().top + document.scrollingElement.scrollTop - scrollPad);
+        return { y, contentH: document.body.scrollHeight };
+    }, { open: sc.open, scrollTo: sc.scrollTo, scrollPad: sc.scrollPad ?? 10 });
+    if (fitHeight) {
+        await page.evaluate((h) => {
+            const wrap = document.querySelector('.popup-wrap'), ifr = wrap.querySelector('iframe');
+            wrap.style.height = h * (wrap.offsetWidth / 380) + 'px';
+            ifr.style.height = h + 'px';
+        }, Math.min(fitHeight, Math.ceil(contentH - y)));
+    }
+    await frame.evaluate((y) => {
+        document.scrollingElement.scrollTop = y;
+        document.body.scrollTop = y;
+    }, y);
+}
+
+// jobs: [{ file, html, width, height, scale?, slide?, scenarios?, transparent? }] → written file paths
+async function render(jobs, outDir) {
+    fs.mkdirSync(outDir, { recursive: true });
+    const srv = await serve(jobs.map((j) => j.html));
     const base = `http://127.0.0.1:${srv.address().port}`;
     const launchOpts = {};
     const chromeCandidates = [process.env.CHROME_PATH, '/opt/pw-browsers/chromium-1194/chrome-linux/chrome'].filter(Boolean);
@@ -345,50 +449,37 @@ function flattenRgb(files) {
     if (exe) launchOpts.executablePath = exe;
     const browser = await chromium.launch(launchOpts);
     const written = [];
-
-    for (const n of [1, 2, 3, 4, 5]) {
-        const page = await browser.newPage({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 });
-        page.on('pageerror', (e) => console.error('pageerror', e.message));
-        await page.addInitScript(initMocks, { scenarios: SCENARIOS, botView: BOT_VIEW });
-        await page.goto(`${base}/__slide/${n}`);
-        const frame = page.frames().find((f) => f.url().includes('popup.html'));
-        await frame.waitForSelector('#analyzeBtn');
-        await frame.click('#analyzeBtn');
-        await frame.waitForSelector('#results:not(.hidden)');
-        const sc = SCENARIOS[n];
-        if (sc.detective) {
-            await frame.click('#detectiveBtn');
-            await frame.waitForFunction(() => document.querySelectorAll('#detectiveResults .check-item, #detectiveResults > *').length > 3);
+    try {
+        for (const [i, job] of jobs.entries()) {
+            const page = await browser.newPage({ viewport: { width: job.width, height: job.height }, deviceScaleFactor: job.scale || 1 });
+            page.on('pageerror', (e) => console.error('pageerror', e.message));
+            if (job.slide) await page.addInitScript(initMocks, { scenarios: job.scenarios, botView: BOT_VIEW, maxHeight: job.popupHeight });
+            await page.goto(`${base}/__page/${i}`);
+            if (job.slide) await preparePopup(page, job.scenarios[job.slide], job.fitPopup && job.popupHeight);
+            await page.waitForTimeout(job.slide ? 300 : 200);
+            const file = path.join(outDir, job.file);
+            await page.screenshot({ path: file, omitBackground: !!job.transparent });
+            written.push(file);
+            await page.close();
         }
-        await frame.evaluate(({ open, scrollTo }) => {
-            const secs = [...document.querySelectorAll('details.section')];
-            secs.forEach((d, i) => { d.open = open.includes(i); });
-            document.activeElement?.blur();
-            if (scrollTo !== null) {
-                const el = secs[scrollTo];
-                const y = el.getBoundingClientRect().top + document.scrollingElement.scrollTop - 10;
-                document.scrollingElement.scrollTop = y;
-                document.body.scrollTop = y;
-            }
-        }, { open: sc.open, scrollTo: sc.scrollTo });
-        await page.waitForTimeout(300);
-        const file = path.join(OUT, `screenshot-${n}.png`);
-        await page.screenshot({ path: file });
-        written.push(file);
-        await page.close();
+    } finally {
+        await browser.close();
+        srv.close();
     }
+    return written;
+}
 
-    for (const [kind, w, h, name] of [['small', 440, 280, 'promo-small-440x280.png'], ['marquee', 1400, 560, 'promo-marquee-1400x560.png']]) {
-        const page = await browser.newPage({ viewport: { width: w, height: h }, deviceScaleFactor: 1 });
-        await page.goto(`${base}/__promo/${kind}`);
-        await page.waitForTimeout(200);
-        const file = path.join(OUT, name);
-        await page.screenshot({ path: file });
-        written.push(file);
-        await page.close();
-    }
+module.exports = { SLIDES, SCENARIOS, CHROME_LAYOUT, LOGO, BASE_CSS, slideJobs, render, flattenRgb };
 
-    await browser.close();
-    srv.close();
-    flattenRgb(written);
-})().catch((e) => { console.error(e); process.exit(1); });
+// ─── Chrome Web Store run ────────────────────────────────────────────
+
+if (require.main === module) {
+    (async () => {
+        const jobs = [
+            ...slideJobs(CHROME_LAYOUT),
+            { file: 'promo-small-440x280.png', html: promoHtml('small'), width: 440, height: 280 },
+            { file: 'promo-marquee-1400x560.png', html: promoHtml('marquee'), width: 1400, height: 560 },
+        ];
+        flattenRgb(await render(jobs, OUT));
+    })().catch((e) => { console.error(e); process.exit(1); });
+}

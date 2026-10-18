@@ -52,7 +52,7 @@ EXHIBIT B · LLM READABILITY
 • Visible text vs. inline script
 • Main content length
 • Detects "empty app shells" that only render with JavaScript
-• Names the framework (Next.js, Nuxt, React, Vue, Angular, Svelte and more)
+• Names the JavaScript framework the page is built with
 
 EXHIBIT C · STRUCTURED DATA
 • JSON-LD types and key fields (Article, Product, FAQPage, Organization)
@@ -62,7 +62,7 @@ EXHIBIT C · STRUCTURED DATA
 Every loose end comes with a concrete recommendation. Copy the full case file as JSON for tickets, reports or your own tools.
 
 THE BOT-VIEW CLUE (OPTIONAL, PAID: 5¢ PER CHECK)
-Want to know what the crawlers themselves get? The Bot-View clue asks datadetective.app to check robots.txt, the server response and the text visible without JavaScript for GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, Google-Extended and more.
+Want to know what the crawlers themselves get? The Bot-View clue asks datadetective.app to check robots.txt, the server response and the text visible without JavaScript for the major AI crawlers, such as GPTBot.
 • Runs only when you click "Call the detective"
 • Requires your own API key from datadetective.app (paid service, 5¢ per check)
 • Sends only the page URL and the length of its visible text (a number), plus your API key
@@ -102,7 +102,7 @@ BEWEISSTÜCK B · LESBARKEIT FÜR LLMs
 • Sichtbarer Text im Verhältnis zu Inline-Skripten
 • Länge des Hauptinhalts
 • Erkennt leere „App Shells“, die nur mit JavaScript Inhalte zeigen
-• Nennt das Framework (Next.js, Nuxt, React, Vue, Angular, Svelte u. a.)
+• Nennt das JavaScript-Framework, mit dem die Seite gebaut ist
 
 BEWEISSTÜCK C · STRUKTURIERTE DATEN
 • JSON-LD-Typen und wichtige Felder (Article, Product, FAQPage, Organization)
@@ -112,7 +112,7 @@ BEWEISSTÜCK C · STRUKTURIERTE DATEN
 Zu jeder Schwachstelle gibt es eine konkrete Empfehlung. Die komplette Fallakte lässt sich als JSON kopieren.
 
 DER BOT-VIEW-HINWEIS (OPTIONAL, KOSTENPFLICHTIG: 5 CENT PRO PRÜFUNG)
-datadetective.app prüft robots.txt, Server-Antwort und den ohne JavaScript sichtbaren Text für GPTBot, OAI-SearchBot, ClaudeBot, PerplexityBot, Google-Extended und weitere.
+datadetective.app prüft robots.txt, Server-Antwort und den ohne JavaScript sichtbaren Text für die wichtigsten AI-Crawler, etwa GPTBot.
 • Läuft nur nach Klick auf „Call the detective“
 • Benötigt einen eigenen API-Schlüssel von datadetective.app (kostenpflichtig, 5 Cent pro Prüfung)
 • Übertragen werden nur die URL der Seite und die Länge ihres sichtbaren Texts (eine Zahl), dazu dein API-Schlüssel
@@ -164,7 +164,7 @@ but use them as alt text on the website / in announcements, and they match the h
 2. **Exhibit A · Basic SEO.** Title, description and headings plus the GEO signals: meta robots, canonical, lang and hreflang, each with a concrete fix.
 3. **Exhibit B · LLM readability.** Flags empty app shells and JavaScript-heavy pages that most AI crawlers can't read, and names the framework.
 4. **Exhibit C · Structured data.** JSON-LD types and key fields, author and dates, Open Graph and Twitter Cards at a glance.
-5. **The Bot-View clue (optional, 5¢).** See whether GPTBot, ClaudeBot or PerplexityBot are blocked by robots.txt or bot protection, checked via datadetective.app.
+5. **The Bot-View clue (optional, 5¢).** See whether AI crawlers like GPTBot are blocked by robots.txt or bot protection, checked via datadetective.app.
 
 All screenshots show the real extension popup (rendered from `extension/popup.html`) on a fictional
 sample site, "Northwind Coffee Roasters" (`northwind-coffee.example`). Bot-View results are sample data.
