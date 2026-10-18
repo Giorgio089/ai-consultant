@@ -184,4 +184,4 @@ MIT — use it, fork it, build on it.
 
 ---
 
-*Current version: `0.2.0`*
+*Current version: `0.2.0` — see [CHANGELOG.md](CHANGELOG.md)*
