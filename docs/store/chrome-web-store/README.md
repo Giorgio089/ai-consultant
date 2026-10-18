@@ -30,6 +30,12 @@ All PNGs are 24-bit RGB without an alpha channel, as the store requires. The sto
   "Northwind Coffee Roasters" (`northwind-coffee.example`). The Bot-View response is sample data in
   `BOT_VIEW` and uses the field names `renderBotView()` in `extension/popup.js` expects.
 - Headlines, sublines and bullets per slide live in `SLIDES`; the sample pages in `SCENARIOS`.
+  Never list more than two product, bot or framework names in a row in slide copy: the Chrome Web
+  Store rejected an earlier version for keyword spam. Write "AI crawlers like GPTBot" or
+  "JavaScript frameworks" instead.
+- The slide geometry lives in `CHROME_LAYOUT`. The module exports its building blocks, and
+  `docs/store/firefox-amo/generate.cjs` reuses them with a 4:3 layout and a Firefox-style frame, so
+  copy changes here also apply to the AMO screenshots (regenerate both).
 - After rendering, Pillow flattens every PNG to RGB.
 
 Because the popup is rendered live, the screenshots pick up any UI change in `extension/` when you
