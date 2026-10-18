@@ -15,7 +15,7 @@ Available for **Chrome** and **Firefox**. Install once, audit everything.
 | Browser | Link |
 |---------|------|
 | 🦊 **Firefox** (desktop 140+, Android 142+) | [addons.mozilla.org/addon/geo-page-audit](https://addons.mozilla.org/addon/geo-page-audit/) |
-| 🌐 **Chrome** | Chrome Web Store *(coming soon)* |
+| 🌐 **Chrome** | [Chrome Web Store](https://chromewebstore.google.com/detail/geo-page-audit/gfhlhobhpiokniniahmkneileoaafopd?authuser=0&hl=de&pli=1) |
 
 Or load it manually — see [Development Setup](#development--manual-load) below.
 
