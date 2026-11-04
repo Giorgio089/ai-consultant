@@ -8,7 +8,7 @@
 
 import { runAudit } from './audit/runAudit.js';
 import { getBrowserApi } from './lib/browserApi.js';
-import { callBotView, getSettings, requestDataConsent, severityToStatus } from './lib/detective.js';
+import { callAiPolicy, callBotView, getSettings, requestDataConsent, severityToStatus } from './lib/detective.js';
 
 // ─── DOM Elements ───────────────────────────────────────────────────
 
@@ -26,6 +26,10 @@ const detectiveResultsEl = $('#detectiveResults');
 const keyRowEl = $('#keyRow');
 const apiKeyInput = $('#apiKeyInput');
 const forgetKeyBtn = $('#forgetKeyBtn');
+const policyBtn = $('#policyBtn');
+const policyLoadingEl = $('#policyLoading');
+const policyErrorEl = $('#policyError');
+const policyResultsEl = $('#policyResults');
 
 const ANALYZE_LABEL = 'Investigate this page';
 const REANALYZE_LABEL = 'Investigate again';
@@ -35,6 +39,7 @@ let lastResult = null;
 let lastTextLength = null;
 let analyzing = false;
 let detectiveBusy = false;
+let policyBusy = false;
 const browserApi = getBrowserApi();
 
 // ─── Analyze ────────────────────────────────────────────────────────
@@ -91,6 +96,7 @@ async function analyze() {
         loadingEl.classList.add('hidden');
         lastResult = result;
         resetDetective();
+        resetAiPolicy();
         renderResults(result);
 
         // Keep the button around so the page can be re-examined after it changes.
@@ -296,6 +302,124 @@ export function renderBotView(data) {
 
 function capitalize(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+// ─── AI policy (free) ───────────────────────────────────────────────
+
+policyBtn.addEventListener('click', () => {
+    // Synchronous lock, as for the detective: one check at a time.
+    if (policyBusy || analyzing || !lastResult) return;
+    policyBusy = true;
+    policyBtn.disabled = true;
+    // Consent is asked before the first await, while the click is still being handled.
+    runAiPolicy(lastResult);
+});
+
+async function runAiPolicy(target) {
+    try {
+        const consent = requestDataConsent();
+        if (!(await consent)) {
+            showPolicyError('No problem: without your consent the URL stays in your browser.');
+            return;
+        }
+        const { apiBase } = await getSettings(browserApi.storage.local);
+        policyErrorEl.classList.add('hidden');
+        policyResultsEl.replaceChildren();
+        policyLoadingEl.classList.remove('hidden');
+
+        const outcome = await callAiPolicy({ url: target.url, apiBase });
+        if (target !== lastResult) return; // the page was investigated again meanwhile
+        if (!outcome?.ok) {
+            showPolicyError(outcome?.message || 'The check came back empty-handed.');
+            return;
+        }
+        target.aiPolicy = outcome.data;
+        renderAiPolicy(outcome.data);
+    } catch (err) {
+        showPolicyError(`Something went wrong: ${err?.message ?? err}`);
+    } finally {
+        policyLoadingEl.classList.add('hidden');
+        policyBusy = false;
+        policyBtn.disabled = false;
+    }
+}
+
+function resetAiPolicy() {
+    delete lastResult?.aiPolicy;
+    policyResultsEl.replaceChildren();
+    policyErrorEl.classList.add('hidden');
+}
+
+function showPolicyError(message) {
+    policyErrorEl.textContent = message;
+    policyErrorEl.classList.remove('hidden');
+}
+
+/** Findings first, then what the site says: llms.txt, robots.txt per AI crawler, Content Signals, page directives. */
+export function renderAiPolicy(data) {
+    policyResultsEl.replaceChildren();
+    const add = (status, title, detail) => policyResultsEl.appendChild(makeCheckItem(status, title, detail, null));
+
+    const findings = Array.isArray(data?.findings) ? data.findings : [];
+    for (const finding of findings) {
+        const severity = typeof finding?.severity === 'string' && finding.severity ? finding.severity : 'note';
+        add(severityToStatus(severity), capitalize(severity), finding?.message ?? '');
+    }
+    if (findings.length === 0) add('good', 'Nothing to object to', 'The site states its AI rules clearly.');
+
+    const llms = data?.llmsTxt ?? {};
+    if (llms.exists) {
+        const parts = [
+            llms.title ? `"${truncate(llms.title, 50)}"` : null,
+            typeof llms.links === 'number' ? `${llms.links} link(s)` : null,
+            typeof llms.sections === 'number' ? `${llms.sections} section(s)` : null,
+            llms.summary ? 'with summary' : 'no summary',
+        ].filter(Boolean);
+        add(llms.valid ? 'good' : 'warn', 'llms.txt', parts.join(' · '));
+    } else {
+        add('warn', 'llms.txt', llms.servedHtml ? 'Answers with an HTML page, not Markdown'
+            : llms.error ? `Not readable (${llms.error})` : 'Not found (optional)');
+    }
+
+    const robots = data?.robotsTxt ?? {};
+    const bots = (Array.isArray(robots.bots) ? robots.bots : []).filter((b) => b && typeof b.token === 'string');
+    if (robots.checked === false) {
+        add('warn', 'AI crawlers in robots.txt', `robots.txt could not be read${robots.status ? ` (HTTP ${robots.status})` : ''}`);
+    } else if (bots.length) {
+        // "training (Gemini)" reads as "(training, Gemini)" in parentheses.
+        const name = (b) => (b.purpose ? `${b.token} (${String(b.purpose).replace(/\s*\((.+)\)$/, ', $1')})` : b.token);
+        const allowed = bots.filter((b) => b.allowed === true).map(name);
+        const blocked = bots.filter((b) => b.allowed === false).map((b) => `${name(b)}${b.rule ? ` – ${b.rule}` : ''}`);
+        const searchBlocked = bots.some((b) => b.allowed === false && b.purpose === 'search');
+        add(
+            searchBlocked ? 'bad' : blocked.length ? 'warn' : 'good',
+            robots.found ? 'AI crawlers in robots.txt' : 'AI crawlers (no robots.txt, all allowed)',
+            [allowed.length ? `Allowed: ${allowed.join(', ')}` : null, blocked.length ? `Disallowed: ${blocked.join('; ')}` : null]
+                .filter(Boolean).join(' · '),
+        );
+    }
+
+    const signals = data?.contentSignals;
+    if (signals && typeof signals === 'object' && Object.keys(signals).length) {
+        add('good', 'Content Signals', Object.entries(signals).map(([k, v]) => `${k}=${v}`).join(', '));
+    } else if (robots.found) {
+        add('warn', 'Content Signals', 'None in robots.txt');
+    }
+
+    const optOut = Array.isArray(data?.aiOptOut) ? data.aiOptOut : [];
+    const directives = [
+        data?.xRobotsTag ? `X-Robots-Tag: ${truncate(data.xRobotsTag, 60)}` : null,
+        data?.metaRobots ? `meta robots: ${truncate(data.metaRobots, 60)}` : null,
+    ].filter(Boolean);
+    add(
+        data?.noindex ? 'bad' : optOut.length ? 'warn' : 'good',
+        'Page directives',
+        [
+            data?.noindex ? 'noindex' : 'indexable',
+            optOut.length ? `AI opt-out: ${optOut.join(', ')}` : null,
+            ...directives,
+        ].filter(Boolean).join(' · '),
+    );
 }
 
 // ─── Error Display ──────────────────────────────────────────────────

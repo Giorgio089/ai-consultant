@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    callBotView, getSettings, normalizeApiBase, requestDataConsent, DEFAULT_API_BASE,
+    callAiPolicy, callBotView, getSettings, normalizeApiBase, requestDataConsent, DEFAULT_API_BASE,
 } from '../extension/lib/detective.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
@@ -190,4 +190,44 @@ test('requestDataConsent asks Firefox for browsingActivity and skips Chrome', as
     } finally {
         delete globalThis.browser;
     }
+});
+
+// ─── AI policy (free) ───────────────────────────────────────────────
+
+const POLICY = { check: 'ai-policy', url: 'https://e.com/a?b=1', findings: [], llmsTxt: { exists: false }, robotsTxt: { bots: [] } };
+
+test('callAiPolicy sends only the encoded URL, never an API key', async () => {
+    const fetchImpl = fakeFetch(200, POLICY);
+    const result = await callAiPolicy({ url: 'https://e.com/a?b=1', fetchImpl });
+    assert.equal(result.ok, true);
+    assert.equal(fetchImpl.calls[0].url, `${DEFAULT_API_BASE}/api/check/ai-policy?url=https%3A%2F%2Fe.com%2Fa%3Fb%3D1`);
+    assert.equal(fetchImpl.calls[0].init.method, undefined, 'GET');
+    assert.equal(fetchImpl.calls[0].init.body, undefined);
+    assert.equal(fetchImpl.calls[0].init.headers.authorization, undefined);
+    assert.ok(fetchImpl.calls[0].init.signal, 'request carries a timeout signal');
+});
+
+test('callAiPolicy keeps to the allowed API bases', async () => {
+    const fetchImpl = fakeFetch(200, POLICY);
+    await callAiPolicy({ url: 'https://e.com/', apiBase: 'https://evil.example', fetchImpl });
+    await callAiPolicy({ url: 'https://e.com/', apiBase: 'http://localhost:8787', fetchImpl });
+    assert.match(fetchImpl.calls[0].url, /^https:\/\/datadetective\.app\//);
+    assert.match(fetchImpl.calls[1].url, /^http:\/\/localhost:8787\//);
+});
+
+test('callAiPolicy maps errors and rejects unexpected answers', async () => {
+    const run = (status, body, headers) => callAiPolicy({ url: 'https://e.com/', fetchImpl: fakeFetch(status, body, headers) });
+    assert.equal((await run(429, { error: 'rate_limited' })).reason, 'rate_limited');
+    assert.equal((await run(400, { error: 'invalid_input', message: 'Private addresses are not allowed.' })).message, 'Private addresses are not allowed.');
+    assert.equal((await run(502, '<html>bad gateway</html>', { 'content-type': 'text/html' })).message, 'datadetective.app answered 502.');
+    assert.equal((await run(200, { clue: 'bot-view', findings: [] })).message, 'Unexpected answer from datadetective.app.');
+    assert.equal((await run(200, '<html></html>', { 'content-type': 'text/html' })).reason, 'error');
+
+    const timeout = await callAiPolicy({
+        url: 'https://e.com/',
+        fetchImpl: async () => { throw Object.assign(new Error('t'), { name: 'TimeoutError' }); },
+    });
+    assert.equal(timeout.reason, 'timeout');
+    const offline = await callAiPolicy({ url: 'https://e.com/', fetchImpl: async () => { throw new TypeError('Failed to fetch'); } });
+    assert.match(offline.message, /Could not reach datadetective.app \(Failed to fetch\)/);
 });

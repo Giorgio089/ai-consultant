@@ -61,7 +61,7 @@ You get a score out of 100, concrete suggestions per check and a JSON export of 
 Most AI crawlers do not run JavaScript, so they may see much less than you do. The Bot-View clue asks <a href="https://datadetective.app">datadetective.app</a> to check robots.txt, the server response and the text visible without JavaScript for the major AI crawlers, such as GPTBot. It needs a datadetective.app API key.
 
 <b>Privacy</b>
-The audit runs entirely in your browser. Nothing is sent anywhere unless you click "Call the detective". Then the extension sends the page URL and the length of the visible text (a number, not the text) to datadetective.app, together with your API key. Firefox asks for your consent the first time. No tracking, no analytics, no account needed for the audit.
+The audit runs entirely in your browser. Nothing is sent anywhere unless you click "Call the detective" or "Check the AI policy". "Call the detective" sends the page URL and the length of the visible text (a number, not the text) to datadetective.app, together with your API key; the free AI policy check sends only the page URL. Firefox asks for your consent the first time. No tracking, no analytics, no account needed for the audit.
 
 Works on Firefox for desktop (140+) and Android (142+).
 ```
@@ -96,7 +96,7 @@ Du bekommst einen Score bis 100, konkrete Vorschläge je Prüfung und einen JSON
 Die meisten AI-Crawler führen kein JavaScript aus und sehen deshalb oft viel weniger als du. Der Bot-View-Check lässt <a href="https://datadetective.app">datadetective.app</a> robots.txt, Server-Antwort und den ohne JavaScript sichtbaren Text für die wichtigsten AI-Crawler prüfen, etwa GPTBot. Dafür brauchst du einen API-Key von datadetective.app.
 
 <b>Datenschutz</b>
-Der Audit läuft komplett im Browser. Es wird nichts gesendet, solange du nicht auf „Call the detective“ klickst. Dann schickt die Erweiterung die URL der Seite und die Länge des sichtbaren Textes (eine Zahl, nicht den Text) zusammen mit deinem API-Key an datadetective.app. Firefox fragt beim ersten Mal nach deiner Zustimmung. Kein Tracking, keine Analytics, für den Audit kein Konto nötig.
+Der Audit läuft komplett im Browser. Es wird nichts gesendet, solange du nicht auf „Call the detective“ oder „Check the AI policy“ klickst. „Call the detective“ schickt die URL der Seite und die Länge des sichtbaren Textes (eine Zahl, nicht den Text) zusammen mit deinem API-Key an datadetective.app; der kostenlose AI-Policy-Check schickt nur die URL. Firefox fragt beim ersten Mal nach deiner Zustimmung. Kein Tracking, keine Analytics, für den Audit kein Konto nötig.
 
 Die Oberfläche der Erweiterung ist auf Englisch. Läuft in Firefox für Desktop (ab 140) und Android (ab 142).
 ```
@@ -143,7 +143,7 @@ The page audit is free and runs locally. The optional Bot-View clue is a paid se
 ```
 No build step, no minification: the uploaded files are the source (built with scripts/package-extension.mjs, which only copies files and picks the Firefox manifest).
 
-Data collection: required ["none"], optional ["browsingActivity"]. The extension requests the optional permission via browser.permissions.request({data_collection: ["browsingActivity"]}) when the user clicks "Call the detective". Only then the page URL and the visible text length (a number) are sent to https://datadetective.app/api/clue/bot-view with the user's API key. Without consent nothing is sent.
+Data collection: required ["none"], optional ["browsingActivity"]. The extension requests the optional permission via browser.permissions.request({data_collection: ["browsingActivity"]}) when the user clicks "Call the detective" or "Check the AI policy". Only then the page URL and the visible text length (a number) are sent to https://datadetective.app/api/clue/bot-view with the user's API key, or only the page URL to https://datadetective.app/api/check/ai-policy (free, no key). Without consent nothing is sent.
 
 Permissions: activeTab + scripting read the rendered DOM of the current tab after the user clicks "Investigate this page". storage keeps the user's API key locally. No host permissions.
 
@@ -157,7 +157,7 @@ Either link to https://datadetective.app/privacy (once it covers the extension) 
 ```
 GEO Page Audit runs its page audit locally in your browser and does not collect, store or transmit any data for it.
 
-Optional Bot-View clue: only when you click "Call the detective", the extension sends the URL of the current page and the length of its visible text (a number, not the text) to datadetective.app, together with your datadetective.app API key. datadetective.app uses this to run the check and logs the call (API key, product, price, target URL) for billing. Firefox asks for your consent before the first transmission.
+Optional Bot-View clue: only when you click "Call the detective", the extension sends the URL of the current page and the length of its visible text (a number, not the text) to datadetective.app, together with your datadetective.app API key. datadetective.app uses this to run the check and logs the call (API key, product, price, target URL) for billing. Optional free AI policy check: only when you click "Check the AI policy", the extension sends the URL of the current page to datadetective.app, which reads that site's llms.txt, robots.txt and the page's robots directives and returns the result; the call is not logged with an API key, none is sent. Firefox asks for your consent before the first transmission.
 
 Your API key is stored locally in the extension's storage and can be removed with "Forget API key". The extension contains no analytics or tracking.
 

@@ -60,6 +60,24 @@
         <div id="sdChecks" class="checks"></div>
       </details>
 
+      <!-- AI policy (free check on datadetective.app) -->
+      <details class="section" open>
+        <summary>Exhibit D · AI policy <span class="section-score">free</span></summary>
+        <div class="checks">
+          <p class="check-detail detective-note">
+            Reads llms.txt, the robots.txt rules and Content Signals for GPTBot, ClaudeBot, PerplexityBot and more,
+            and whether the page says noindex. Sends only this page's URL to datadetective.app. No API key needed.
+          </p>
+          <button id="policyBtn" class="analyze-btn detective-btn">Check the AI policy</button>
+          <div id="policyLoading" class="loading hidden">
+            <div class="spinner"></div>
+            <p>Reading the house rules…</p>
+          </div>
+          <p id="policyError" class="check-recommendation detective-message hidden"></p>
+          <div id="policyResults"></div>
+        </div>
+      </details>
+
       <!-- Detective (paid clue on datadetective.app) -->
       <details class="section" open>
         <summary>The Bot-View clue <span class="section-score">5¢</span></summary>

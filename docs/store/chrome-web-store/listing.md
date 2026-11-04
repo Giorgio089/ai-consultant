@@ -211,7 +211,7 @@ Stores the user's optional datadetective.app API key in chrome.storage.local so 
 **Host permissions: none requested**
 
 ```
-The extension requests no host permissions. Page access happens only through activeTab after an explicit user action. The optional Bot-View request is a regular HTTPS request from the popup to https://datadetective.app, which answers with CORS headers, so no host permission is needed.
+The extension requests no host permissions. Page access happens only through activeTab after an explicit user action. The optional Bot-View and AI policy requests are regular HTTPS requests from the popup to https://datadetective.app, which answers with CORS headers, so no host permission is needed.
 ```
 
 (Only fill in the field if the dashboard asks; with no host permissions it usually does not.)
@@ -221,7 +221,7 @@ The extension requests no host permissions. Page access happens only through act
 **No, I am not using remote code.**
 
 ```
-All JavaScript is packaged in the extension. The request to datadetective.app returns JSON data only (findings, bot results), which is rendered as text. No script, eval or remote module is loaded.
+All JavaScript is packaged in the extension. The requests to datadetective.app return JSON data only (findings, bot and policy results), which is rendered as text. No script, eval or remote module is loaded.
 ```
 
 ### Data usage
@@ -233,6 +233,7 @@ What actually leaves the device, and when:
 | URL of the active tab | Only after the user clicks "Call the detective" | `https://datadetective.app/api/clue/bot-view` |
 | Visible text length of the page (an integer) | same | same |
 | User's own datadetective.app API key (Bearer header) | same | same |
+| URL of the active tab (no API key, nothing else) | Only after the user clicks "Check the AI policy" (free) | `https://datadetective.app/api/check/ai-policy` |
 | Page HTML / text content | Never. Analyzed locally in the popup | – |
 
 Tick these categories:

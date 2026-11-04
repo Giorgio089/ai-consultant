@@ -48,6 +48,12 @@ Or load it manually — see [Development Setup](#development--manual-load) below
 - How much of the text you see is in the raw HTML, i.e. visible without JavaScript
 - Needs a datadetective API key (5 ct per check)
 
+### 📜 AI Policy Check (optional, free, via datadetective.app)
+- llms.txt: present, in the llmstxt.org format, title, sections and links
+- robots.txt rules per AI crawler, split into search and training, and Content Signals (`ai-train`, `ai-input`, `search`)
+- noindex and AI opt-out directives from X-Robots-Tag and meta robots
+- No API key needed; sends only the page URL
+
 ---
 
 ## 🚀 Usage
@@ -56,8 +62,9 @@ Or load it manually — see [Development Setup](#development--manual-load) below
 2. Click the **Data Detective** (magnifying glass) icon in your toolbar
 3. Hit **Investigate this page**
 4. Get an instant breakdown with actionable suggestions
-5. Optional: **Call the detective** to see what AI crawlers get (needs an API key)
-6. Use **Copy case file (JSON)** to export the results for further analysis or reporting
+5. Optional: **Check the AI policy** (free) to see what the site tells AI crawlers in llms.txt and robots.txt
+6. Optional: **Call the detective** to see what AI crawlers get (needs an API key)
+7. Use **Copy case file (JSON)** to export the results for further analysis or reporting
 
 That's it. No login. No tracking. No "upgrade to Pro for full results." The free audit stays complete; the AI Crawler Check is a separate, optional extra.
 
@@ -77,7 +84,8 @@ No background snooping. No persistent host permissions. No analytics phoning hom
 
 The page audit runs entirely locally. Only when you click **Call the detective**, the extension sends
 **the page URL and the length of its visible text** (a number, not the text) to `datadetective.app`,
-together with your API key. Nothing else, never in the background. In Firefox this is declared as optional
+together with your API key. Only when you click **Check the AI policy**, it sends **the page URL** to
+`datadetective.app`, without a key. Nothing else, never in the background. In Firefox this is declared as optional
 `browsingActivity` data collection, and Firefox asks for your consent on first use.
 
 ---

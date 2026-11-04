@@ -1,12 +1,14 @@
 /**
- * Client for the paid clues on datadetective.app.
+ * Client for datadetective.app: the paid Bot-View clue and the free AI policy check.
  *
- * Only the page URL and the rendered text length leave the browser,
- * and only after the user clicks "Call the detective".
+ * Only the page URL (and for Bot-View the rendered text length) leaves the browser,
+ * and only after the user clicks the button for it.
  */
 
 export const DEFAULT_API_BASE = 'https://datadetective.app';
 export const DEFAULT_TIMEOUT_MS = 45000;
+/** The server gives the check 15 s; a little more for the way there and back. */
+export const AI_POLICY_TIMEOUT_MS = 25000;
 export const DATA_COLLECTION = ['browsingActivity'];
 
 const TIMEOUT_MESSAGE = 'The detective took too long. Try again.';
@@ -136,6 +138,56 @@ export async function callBotView({
     if (res.status === 402) return { ok: false, reason: 'no_key', message: serverMessage || 'An API key is required.' };
     if (res.status === 401) return { ok: false, reason: 'invalid_key', message: 'This API key is not valid.' };
     if (res.status === 429) return { ok: false, reason: 'rate_limited', message: 'Too many requests, try again in a minute.' };
+    return { ok: false, reason: 'error', message: serverMessage || `datadetective.app answered ${res.status}.` };
+}
+
+function isAiPolicyPayload(body) {
+    return (
+        body !== null
+        && typeof body === 'object'
+        && !Array.isArray(body)
+        && body.check === 'ai-policy'
+        && Array.isArray(body.findings)
+    );
+}
+
+/**
+ * Free check of llms.txt, robots.txt rules and Content Signals per AI crawler, X-Robots-Tag and meta robots.
+ * Sends only the URL, never the API key: the endpoint is free and needs none.
+ * @returns {Promise<{ok: true, data: object} | {ok: false, reason: 'rate_limited' | 'timeout' | 'error', message: string}>}
+ */
+export async function callAiPolicy({
+    url,
+    apiBase = DEFAULT_API_BASE,
+    fetchImpl = globalThis.fetch,
+    timeoutMs = AI_POLICY_TIMEOUT_MS,
+}) {
+    const timedOut = { ok: false, reason: 'timeout', message: 'The check took too long. Try again.' };
+    let res;
+    try {
+        res = await fetchImpl(`${normalizeApiBase(apiBase)}/api/check/ai-policy?url=${encodeURIComponent(url)}`, {
+            headers: { accept: 'application/json' },
+            signal: timeoutSignal(timeoutMs),
+        });
+    } catch (err) {
+        if (isTimeout(err)) return timedOut;
+        return { ok: false, reason: 'error', message: `Could not reach datadetective.app (${err?.message ?? err}).` };
+    }
+
+    const isJson = String(res.headers?.get?.('content-type') ?? '').includes('json');
+    let body = null;
+    try {
+        if (isJson) body = await res.json();
+    } catch (err) {
+        if (isTimeout(err)) return timedOut;
+    }
+
+    if (res.ok) {
+        if (!isAiPolicyPayload(body)) return { ok: false, reason: 'error', message: UNEXPECTED_MESSAGE };
+        return { ok: true, data: body };
+    }
+    const serverMessage = typeof body?.message === 'string' && body.message ? body.message.slice(0, 300) : '';
+    if (res.status === 429) return { ok: false, reason: 'rate_limited', message: 'Too many checks, try again in a minute.' };
     return { ok: false, reason: 'error', message: serverMessage || `datadetective.app answered ${res.status}.` };
 }
 

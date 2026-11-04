@@ -160,3 +160,93 @@ test('renderBotView tolerates missing fields and never prints NaN', () => {
     popup.renderBotView({ findings: [], rawVisibilityRatio: 0.42 });
     assert.match($('#detectiveResults').textContent, /42 % of the rendered text/);
 });
+
+// ─── AI policy (free) ───────────────────────────────────────────────
+
+const POLICY = {
+    check: 'ai-policy',
+    url: 'https://example.com/',
+    findings: [
+        { severity: 'critical', message: 'AI search crawlers are blocked (PerplexityBot): the page cannot be cited in their answers.' },
+        { severity: 'info', message: 'No llms.txt. It is optional and its effect is unproven.' },
+    ],
+    llmsTxt: { url: 'https://example.com/llms.txt', exists: false, status: 404 },
+    robotsTxt: {
+        url: 'https://example.com/robots.txt', status: 200, found: true, checked: true,
+        bots: [
+            { token: 'GPTBot', operator: 'OpenAI', purpose: 'training', allowed: false, rule: 'Disallow: /' },
+            { token: 'PerplexityBot', operator: 'Perplexity', purpose: 'search', allowed: false, rule: 'Disallow: /' },
+            { token: 'ClaudeBot', operator: 'Anthropic', purpose: 'training', allowed: true, rule: null },
+            { token: 'Google-Extended', operator: 'Google', purpose: 'training (Gemini)', allowed: true, rule: null },
+        ],
+    },
+    contentSignals: { search: 'yes', 'ai-input': 'yes', 'ai-train': 'no' },
+    page: { status: 200 },
+    xRobotsTag: null,
+    metaRobots: 'max-snippet:-1',
+    noindex: false,
+    aiOptOut: [],
+};
+
+test('the AI policy check is free: one GET without key, results land in the case file', async () => {
+    const before = fetchCalls.length;
+    $('#policyBtn').click();
+    $('#policyBtn').click();
+    await waitFor(() => fetchCalls.length === before + 1, 'policy fetch');
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(fetchCalls.length, before + 1, 'a double click checks once');
+    const call = fetchCalls.at(-1);
+    assert.equal(call.url, 'https://datadetective.app/api/check/ai-policy?url=https%3A%2F%2Fexample.com%2F');
+    assert.equal(call.init.headers.authorization, undefined, 'the stored API key is not sent');
+    assert.equal($('#policyBtn').disabled, true);
+
+    respond(jsonResponse(POLICY));
+    await waitFor(() => !$('#policyBtn').disabled, 'policy button re-enabled');
+    const text = $('#policyResults').textContent;
+    assert.match(text, /Critical.*AI search crawlers are blocked/);
+    assert.match(text, /llms\.txtNot found \(optional\)/);
+    assert.match(text, /Allowed: ClaudeBot \(training\), Google-Extended \(training, Gemini\)/);
+    assert.match(text, /Disallowed: GPTBot \(training\) – Disallow: \/; PerplexityBot \(search\) – Disallow: \//);
+    assert.match(text, /search=yes, ai-input=yes, ai-train=no/);
+    assert.match(text, /indexable · meta robots: max-snippet:-1/);
+    assert.doesNotMatch(text, /NaN|undefined|null/);
+    const robotsItem = [...$('#policyResults').querySelectorAll('.check-item')].find((el) => /AI crawlers in robots/.test(el.textContent));
+    assert.ok(robotsItem.querySelector('.status-bad'), 'a blocked search crawler is shown as bad');
+    assert.equal($('#policyError').classList.contains('hidden'), true);
+});
+
+test('a rate-limited check shows its message; investigating again clears the old result', async () => {
+    const before = fetchCalls.length;
+    $('#policyBtn').click();
+    await waitFor(() => fetchCalls.length === before + 1, 'policy fetch');
+    respond(new Response(JSON.stringify({ error: 'rate_limited' }), { status: 429, headers: { 'content-type': 'application/json' } }));
+    await waitFor(() => !$('#policyBtn').disabled, 'policy button re-enabled');
+    assert.equal($('#policyError').textContent, 'Too many checks, try again in a minute.');
+
+    $('#analyzeBtn').click();
+    await waitFor(() => $('#policyResults').childElementCount === 0 && $('#policyError').classList.contains('hidden'), 'policy reset');
+    await waitFor(() => !$('#analyzeBtn').disabled, 'analysis done');
+});
+
+test('renderAiPolicy tolerates missing fields', () => {
+    popup.renderAiPolicy({});
+    let text = $('#policyResults').textContent;
+    assert.match(text, /Nothing to object to/);
+    assert.doesNotMatch(text, /NaN|undefined|null/);
+
+    popup.renderAiPolicy({
+        findings: [{}], llmsTxt: { exists: true, valid: true, title: 'Example', links: 4, sections: 2, summary: true },
+        robotsTxt: { checked: false, status: 503, bots: [null, { token: 'GPTBot' }] }, noindex: true, aiOptOut: ['noai'],
+    });
+    text = $('#policyResults').textContent;
+    assert.doesNotMatch(text, /NaN|undefined|null/);
+    assert.match(text, /"Example" · 4 link\(s\) · 2 section\(s\) · with summary/);
+    assert.match(text, /robots.txt could not be read \(HTTP 503\)/);
+    assert.match(text, /noindex · AI opt-out: noai/);
+
+    popup.renderAiPolicy({ llmsTxt: { exists: false, servedHtml: true }, robotsTxt: { found: false, checked: true, bots: [{ token: 'GPTBot', allowed: true }] } });
+    text = $('#policyResults').textContent;
+    assert.match(text, /Answers with an HTML page/);
+    assert.match(text, /no robots.txt, all allowed/);
+    assert.doesNotMatch(text, /Content Signals/, 'no robots.txt, nothing to say about signals');
+});
