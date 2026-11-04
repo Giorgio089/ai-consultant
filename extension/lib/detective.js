@@ -191,6 +191,18 @@ export async function callAiPolicy({
     return { ok: false, reason: 'error', message: serverMessage || `datadetective.app answered ${res.status}.` };
 }
 
+/**
+ * The case page of a Bot-View answer, only if it points to a case on the allowed API base
+ * (https://datadetective.app or a local dev server); anything else is dropped.
+ * @returns {string | null}
+ */
+export function caseLink(caseUrl, apiBase = DEFAULT_API_BASE) {
+    if (typeof caseUrl !== 'string') return null;
+    const base = normalizeApiBase(apiBase);
+    const match = caseUrl.match(/^(https?:\/\/[^/]+)\/case\/(c_[A-Za-z0-9_-]{22})$/);
+    return match && match[1] === base ? caseUrl : null;
+}
+
 /** Maps API severities onto the popup's status icons. */
 export function severityToStatus(severity) {
     return severity === 'critical' ? 'bad' : severity === 'warning' ? 'warn' : 'good';

@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Added
+- **Open full case on datadetective.app**: a paid Bot-View result links to its case page (kept 30 days on datadetective.app, visible to anyone with the link). Only links to a case on the allowed API base are shown.
 - **AI Policy Check** (free, opt-in, via datadetective.app): llms.txt format, robots.txt rules per AI crawler (search vs. training), Content Signals, and noindex / AI opt-out directives of the page. Sends only the page URL after a click, never the API key; the result is part of the copied case file (`aiPolicy`).
 
 ## 0.2.0 — 2026-10-18

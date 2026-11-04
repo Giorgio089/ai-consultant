@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-    callAiPolicy, callBotView, getSettings, normalizeApiBase, requestDataConsent, DEFAULT_API_BASE,
+    callAiPolicy, callBotView, caseLink, getSettings, normalizeApiBase, requestDataConsent, DEFAULT_API_BASE,
 } from '../extension/lib/detective.js';
 
 const JSON_HEADERS = { 'content-type': 'application/json; charset=utf-8' };
@@ -230,4 +230,20 @@ test('callAiPolicy maps errors and rejects unexpected answers', async () => {
     assert.equal(timeout.reason, 'timeout');
     const offline = await callAiPolicy({ url: 'https://e.com/', fetchImpl: async () => { throw new TypeError('Failed to fetch'); } });
     assert.match(offline.message, /Could not reach datadetective.app \(Failed to fetch\)/);
+});
+
+test('caseLink accepts only case pages on the allowed API base', () => {
+    const id = 'c_AbCdEfGhIjKlMnOpQrStUv';
+    assert.equal(caseLink(`https://datadetective.app/case/${id}`), `https://datadetective.app/case/${id}`);
+    assert.equal(caseLink(`http://localhost:8787/case/${id}`, 'http://localhost:8787'), `http://localhost:8787/case/${id}`);
+    for (const bad of [
+        `http://datadetective.app/case/${id}`,
+        `https://datadetective.app.evil.example/case/${id}`,
+        `https://evil.example/case/${id}`,
+        `https://datadetective.app/case/${id}?x=1`,
+        `https://datadetective.app/case/c_short`,
+        `javascript:alert(1)//https://datadetective.app/case/${id}`,
+        `http://localhost:8787/case/${id}`,
+        42, null, undefined,
+    ]) assert.equal(caseLink(bad), null, String(bad));
 });

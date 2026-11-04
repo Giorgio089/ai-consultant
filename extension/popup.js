@@ -8,7 +8,7 @@
 
 import { runAudit } from './audit/runAudit.js';
 import { getBrowserApi } from './lib/browserApi.js';
-import { callAiPolicy, callBotView, getSettings, requestDataConsent, severityToStatus } from './lib/detective.js';
+import { callAiPolicy, callBotView, caseLink, getSettings, requestDataConsent, severityToStatus } from './lib/detective.js';
 
 // ─── DOM Elements ───────────────────────────────────────────────────
 
@@ -196,7 +196,7 @@ async function runDetective(target) {
         }
         target.botView = outcome.data;
         forgetKeyBtn.classList.remove('hidden');
-        renderBotView(outcome.data);
+        renderBotView(outcome.data, apiBase);
     } catch (err) {
         showDetectiveError(`Something went wrong: ${err?.message ?? err}`);
     } finally {
@@ -238,8 +238,26 @@ function showDetectiveError(message) {
     detectiveErrorEl.classList.remove('hidden');
 }
 
-export function renderBotView(data) {
+export function renderBotView(data, apiBase) {
     detectiveResultsEl.replaceChildren();
+
+    // The server keeps the result as a case for 30 days; link to it if it is ours.
+    const link = caseLink(data?.caseUrl, apiBase);
+    if (link) {
+        const a = document.createElement('a');
+        a.className = 'case-link';
+        a.href = link;
+        a.target = '_blank';
+        a.rel = 'noopener noreferrer';
+        a.textContent = 'Open full case on datadetective.app';
+        const p = document.createElement('p');
+        p.className = 'check-detail';
+        p.append(a);
+        if (typeof data.caseExpiresAt === 'string' && !Number.isNaN(Date.parse(data.caseExpiresAt))) {
+            p.append(` · until ${data.caseExpiresAt.slice(0, 10)}, for anyone with the link`);
+        }
+        detectiveResultsEl.appendChild(p);
+    }
 
     const findings = Array.isArray(data?.findings) ? data.findings : [];
     const bots = Array.isArray(data?.bots) ? data.bots : [];

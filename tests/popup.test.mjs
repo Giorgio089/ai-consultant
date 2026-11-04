@@ -250,3 +250,18 @@ test('renderAiPolicy tolerates missing fields', () => {
     assert.match(text, /no robots.txt, all allowed/);
     assert.doesNotMatch(text, /Content Signals/, 'no robots.txt, nothing to say about signals');
 });
+
+test('renderBotView links the case only when it is a datadetective.app case', () => {
+    const id = 'c_AbCdEfGhIjKlMnOpQrStUv';
+    popup.renderBotView({ findings: [], caseUrl: `https://datadetective.app/case/${id}`, caseExpiresAt: '2026-12-05T10:00:00.000Z' });
+    const link = $('#detectiveResults a');
+    assert.equal(link.getAttribute('href'), `https://datadetective.app/case/${id}`);
+    assert.equal(link.getAttribute('target'), '_blank');
+    assert.equal(link.getAttribute('rel'), 'noopener noreferrer');
+    assert.match($('#detectiveResults').textContent, /Open full case on datadetective\.app · until 2026-12-05, for anyone with the link/);
+
+    popup.renderBotView({ findings: [], caseUrl: `https://evil.example/case/${id}` });
+    assert.equal($('#detectiveResults a'), null);
+    popup.renderBotView({ findings: [], caseUrl: `https://datadetective.app/case/${id}`, caseExpiresAt: 'soon' });
+    assert.doesNotMatch($('#detectiveResults').textContent, /until/);
+});
