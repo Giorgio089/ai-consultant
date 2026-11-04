@@ -163,6 +163,8 @@ npm test
 
 Unit tests cover scoring, every check, the detective client (timeouts, bad answers, key allowlist), the popup (jsdom) and packaging. One test runs the engine under linkedom, the DOM the datadetective.app worker uses.
 
+`extension/audit/` is the source of the audit engine; the datadetective.app worker keeps an exact copy (its `vendor.json`). Change the engine here, merge to `main`, then run `npm run vendor:sync` in the datadetective repo; its tests fail if the copy is edited there instead.
+
 ---
 
 ## 🗺️ Roadmap
